@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>총괄생산계획 최적화 시스템</title>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
 <style>
@@ -23,7 +23,9 @@
   --blue:  #1a56db;
   --grn:   #1a7f4b;
   --amb:   #d97706;
-  --mono: 'IBM Plex Mono', monospace;
+  /* 공정·관제(HMI/MES) 화면 느낌: 라벨·제목·지표 숫자는 DIN 계열 컨덴스드, 본문은 IBM Plex Sans KR, 표·입력은 고정폭 */
+  --disp: 'Barlow Condensed', 'IBM Plex Sans KR', sans-serif;
+  --mono: 'IBM Plex Mono', 'IBM Plex Sans KR', monospace;
   --sans: 'IBM Plex Sans KR', sans-serif;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -72,17 +74,31 @@ body {
 /* ── LAYOUT ── */
 .layout {
   display: grid;
-  grid-template-columns: 260px 1fr;
-  min-height: calc(100vh - 52px);
+  grid-template-columns: minmax(0,1fr);
+  min-height: calc(100vh - 92px);
 }
 
 /* ── SIDEBAR ── */
 .side {
-  border-right: 1px solid var(--gray2);
   background: var(--off);
-  padding: 1.25rem 1rem;
-  overflow-y: auto;
+  padding: 1.5rem 2rem 2rem;
 }
+.in-head { display:flex; justify-content:space-between; align-items:flex-end; gap:16px; margin-bottom:18px; flex-wrap:wrap; }
+.in-title { font-family:var(--disp); font-size:26px; font-weight:700; letter-spacing:.02em; color:var(--black); }
+.in-desc { font-size:13px; color:var(--gray5); margin-top:2px; }
+.in-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:14px; align-items:start; }
+.in-grid .sec { background:var(--white); border:1px solid var(--gray2); border-top:3px solid var(--black); padding:14px 16px; margin-bottom:0; }
+.in-foot { display:flex; justify-content:flex-end; align-items:center; gap:14px; margin-top:18px; }
+.in-import { margin-bottom:14px; padding:10px 14px; background:#e8f0fe; border:1px solid #1a56db55; color:#1a3f9e; font-size:13px; }
+.hdr-link { font-family:var(--disp); font-size:13px; font-weight:600; letter-spacing:.06em; color:var(--blue); text-decoration:none; margin-left:12px; }
+.in-dirty, .ctx-dirty { font-size:12px; font-weight:600; color:var(--amb); }
+.in-run { padding:10px 26px; }
+.ctx-bar { font-size:12px; color:var(--gray5); background:var(--white); border-bottom:1px solid var(--gray2); padding:8px 2rem; display:flex; flex-wrap:wrap; gap:4px 0; align-items:center; }
+.ctx-k { font-family:var(--disp); font-size:12px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--gray4); margin:0 6px 0 16px; }
+.ctx-k:first-child { margin-left:0; }
+.ctx-edit { margin-left:14px; color:var(--blue); font-weight:600; }
+.pg-no { font-family:var(--disp); font-weight:700; font-size:12px; color:var(--gray4); margin-right:6px; letter-spacing:.04em; }
+.page-btn.active .pg-no { color:var(--black); }
 .sec { margin-bottom: 1.5rem; }
 .sec-hd {
   font-size: 12px; font-weight: 700; letter-spacing: .06em;
@@ -313,6 +329,103 @@ tfoot td:first-child { text-align: left; }
   text-decoration: underline; white-space: nowrap;
 }
 .snap-clear:hover { color: var(--red); }
+/* ── 모델 옵션 / 결과 해석 ── */
+.opt-row { display:flex; align-items:center; gap:6px; font-size:12px; color:var(--gray5); font-weight:600; cursor:pointer; }
+.opt-desc { font-size:10.5px; color:var(--gray4); line-height:1.5; margin-top:6px; }
+.insight { border:1px solid var(--gray2); background:var(--white); padding:14px 16px; }
+.insight ul { margin:0; padding-left:18px; }
+.insight li { font-size:12.5px; line-height:1.75; color:var(--gray5); margin-bottom:2px; }
+.insight li b { color:var(--black); }
+.insight .ins-sub { font-size:11px; color:var(--gray4); }
+.ot-note { font-size:12px; color:var(--gray4); padding:0 16px 12px; }
+.insight table { width:100%; border-collapse:collapse; font-size:12px; }
+.insight th, .insight td { padding:6px 8px; border-bottom:1px solid var(--gray2); text-align:left; white-space:nowrap; }
+.insight th { color:var(--gray4); font-weight:600; }
+/* ── 페이지 전환 / 시뮬레이션 ── */
+.page-nav { display:flex; gap:0; padding:0 2rem; background:var(--off); border-bottom:1px solid var(--gray2); position:sticky; top:52px; z-index:90; }
+.page-btn { background:none; border:none; border-bottom:2px solid transparent; color:var(--gray4); font-size:13px; font-weight:700; padding:9px 16px; cursor:pointer; font-family:var(--sans); white-space:nowrap; }
+.page-btn.active { color:var(--black); border-bottom-color:var(--black); }
+.sim-main { overflow-y:auto; }
+.sim-ctrl { padding:1.25rem 1.5rem; border-bottom:1px solid var(--gray2); background:var(--white); }
+.sim-intro { font-size:13px; color:var(--gray5); line-height:1.7; margin-bottom:14px; }
+.sim-inputs { display:flex; flex-wrap:wrap; gap:18px; align-items:flex-end; }
+.sim-field { display:flex; flex-direction:column; gap:6px; font-size:12px; color:var(--gray5); font-weight:600; }
+.sim-field select { border:1px solid var(--gray2); padding:5px 8px; font-size:13px; background:var(--white); }
+.sim-slider { display:flex; align-items:center; gap:10px; }
+.sim-slider input { width:200px; }
+.sim-slider span { font-family:var(--mono); font-size:14px; color:var(--black); min-width:40px; }
+.sim-chk { flex-direction:row; align-items:center; }
+.sim-btns { display:flex; gap:8px; }
+.sim-stale { margin-top:10px; font-size:12px; color:var(--amb); font-weight:600; }
+.sim-body { padding:1.25rem 1.5rem; }
+.sim-body table { width:100%; border-collapse:collapse; font-size:12.5px; }
+.sim-body th, .sim-body td { padding:7px 10px; border-bottom:1px solid var(--gray2); text-align:right; white-space:nowrap; }
+.sim-body th:first-child, .sim-body td:first-child { text-align:left; }
+.sim-body th { color:var(--gray4); font-weight:600; background:var(--off); }
+.sim-best { color:var(--grn); font-weight:700; }
+.strat-btns { display:flex; gap:4px; }
+.strat-btns button { font-size:11px; padding:3px 9px; border:1px solid var(--gray2); background:var(--white); cursor:pointer; color:var(--gray5); }
+.strat-btns button.active { background:var(--black); color:var(--white); border-color:var(--black); }
+.sim-note { font-size:11.5px; color:var(--gray4); line-height:1.7; margin-top:10px; }
+.ss-explore { margin-bottom:1rem; }
+.ss-slider-row { display:flex; align-items:center; gap:12px; padding:14px 16px 6px; flex-wrap:wrap; }
+.ss-lbl { font-size:12px; font-weight:600; color:var(--gray5); }
+.ss-slider-row input[type=range] { flex:1; min-width:180px; max-width:520px; accent-color:#1a56db; }
+.ss-val { font-family:var(--mono); font-size:20px; font-weight:700; color:#1a56db; min-width:56px; }
+.ss-sel { padding:4px 16px 10px; }
+.ss-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:8px; }
+.ss-kv { border:1px solid var(--gray2); padding:8px 10px; background:var(--off); }
+.ss-k { font-size:10.5px; color:var(--gray4); }
+.ss-v { font-family:var(--mono); font-size:15px; font-weight:700; color:var(--black); }
+.ss-verdict { font-size:12.5px; color:var(--gray5); margin-top:8px; }
+
+/* ── 타이포그래피: 공정 관제 화면 스타일 ── */
+.hdr-title { font-family:var(--disp); font-size:21px; font-weight:700; letter-spacing:.02em; }
+.hdr-sub, .hdr-stat-lbl { font-family:var(--disp); letter-spacing:.1em; text-transform:uppercase; font-weight:600; }
+.hdr-stat-val { font-family:var(--disp); font-size:17px; font-weight:600; letter-spacing:.02em; font-variant-numeric:tabular-nums; }
+.page-btn, .tab-btn { font-family:var(--disp); font-size:15px; font-weight:600; letter-spacing:.04em; }
+.sec-hd, .klbl, .sig-lbl, .rtitle, .ctitle, .snap-title, .ss-k { font-family:var(--disp); letter-spacing:.06em; }
+.sec-hd { font-size:14px; color:var(--gray5); }
+.rtitle, .ctitle { font-size:16px; font-weight:700; }
+.klbl, .sig-lbl { font-size:13px; text-transform:uppercase; }
+.kval, .sig-val, .ss-v, .snap-val, .ss-val { font-family:var(--disp); font-variant-numeric:tabular-nums; letter-spacing:.01em; }
+.kval { font-size:30px; font-weight:700; }
+.sig-val { font-size:22px; font-weight:700; }
+.ss-v { font-size:19px; font-weight:700; }
+.ss-val { font-size:24px; }
+.rbadge { font-family:var(--disp); font-size:12px; letter-spacing:.06em; }
+.run-btn, .snap-btn { font-family:var(--disp); font-size:15px; font-weight:600; letter-spacing:.06em; }
+table, .p-inp, .d-inp { font-variant-numeric:tabular-nums; }
+th { font-family:var(--disp); font-size:13px; letter-spacing:.05em; }
+/* ── 좁은 화면(태블릿·모바일) ── */
+@media (max-width: 900px) {
+  .hdr { height:auto; flex-wrap:wrap; gap:8px; padding:10px 1rem; position:static; }
+  .hdr-left { flex-direction:column; gap:2px; }
+  .hdr-right { flex-wrap:wrap; gap:8px; }
+  .divider { display:none; }
+  .layout { grid-template-columns:minmax(0,1fr); }
+  .side { padding:1rem; }
+  .in-grid { grid-template-columns:minmax(0,1fr); }
+  .ctx-bar { padding:8px 1rem; }
+  .main, .side { min-width:0; }
+  .side { border-right:none; border-bottom:1px solid var(--gray2); }
+  .main { overflow:visible; }
+  .kpi-strip { grid-template-columns:repeat(2,1fr); }
+  .sig-row { grid-template-columns:1fr !important; display:grid; }
+  .tab-wrap { overflow:visible; }
+  .tab-bar { overflow-x:auto; }
+  .tab-btn { white-space:nowrap; flex-shrink:0; }
+  .tab-panel { padding:1rem; overflow:visible; }
+  .chart-grid-2 { grid-template-columns:1fr; }
+  .snap-inner { flex-wrap:wrap; }
+  .page-nav { padding:0 1rem; top:0; position:static; overflow-x:auto; }
+  .sim-slider input { width:150px; }
+  .sim-ctrl, .sim-body { padding:1rem; }
+  .strat-btns { flex-wrap:wrap; }
+  .ss-grid { grid-template-columns:repeat(2,1fr); }
+  .sim-btns { flex-wrap:wrap; }
+  .ccard, .rsec, .insight { min-width:0; max-width:100%; }
+}
 </style>
 </head>
 <body>
@@ -320,7 +433,8 @@ tfoot td:first-child { text-align: left; }
 <header class="hdr">
   <div class="hdr-left">
     <span class="hdr-title">총괄생산계획 최적화</span>
-    <span class="hdr-sub">Aggregate Production Planning · LP Solver</span>
+    <span class="hdr-sub">Aggregate Production Planning · LP / 정수계획(MIP)</span>
+    <a class="hdr-link" href="https://gwagm585-wq.github.io/spc/" target="_blank" rel="noopener">← SPC 대시보드</a>
   </div>
   <div class="hdr-right">
     <div class="hdr-stat">
@@ -338,13 +452,27 @@ tfoot td:first-child { text-align: left; }
       <span class="hdr-stat-val" id="hStatus">READY</span>
     </div>
     <div class="divider"></div>
-    <button class="snap-btn" id="snapBtn" onclick="saveSnapshot()" disabled>현재 결과 저장</button><button class="snap-btn" onclick="resetDefaults()" style="border-color:var(--gray3);color:var(--gray5);font-size:13px;font-weight:700">강의록 값으로 초기화</button><button class="run-btn" id="runBtn" onclick="runSolve()">최적화 실행</button>
+    <button class="snap-btn" id="snapBtn" onclick="saveSnapshot()" disabled>현재 결과 저장</button><button class="snap-btn" onclick="resetDefaults()" style="border-color:var(--gray3);color:var(--gray5);font-size:13px;font-weight:700">기본값으로 초기화</button><button class="run-btn" id="runBtn" onclick="runSolve()">최적화 실행</button>
   </div>
 </header>
 
+<nav class="page-nav">
+  <button class="page-btn active" id="pg0" onclick="showPage(0)"><span class="pg-no">01</span>입력 데이터</button>
+  <button class="page-btn" id="pg1" onclick="showPage(1)"><span class="pg-no">02</span>계획 최적화</button>
+  <button class="page-btn" id="pg2" onclick="showPage(2)"><span class="pg-no">03</span>수요 변동 시뮬레이션</button>
+</nav>
 <div class="layout">
-  <aside class="side">
-    <div class="sec">
+  <aside class="side" id="inputPage">
+    <div class="in-head">
+      <div>
+        <div class="in-title">입력 데이터</div>
+        <div class="in-desc">수요 예측, 비용, 생산 조건, 품질·설비 상태를 입력합니다. 입력을 마치면 <b>최적화 실행</b>을 누르면 02 계획 최적화로 이동합니다.</div>
+      </div>
+      <button class="run-btn in-run" onclick="runSolve(true)">최적화 실행 →</button>
+    </div>
+    <div class="in-import" id="inImport" style="display:none"></div>
+    <div class="in-grid">
+    <div class="sec sec-demand">
       <div class="sec-hd">월별 예상수요 (개)</div>
       <div id="dg"></div>
       <div class="m-ctrl">
@@ -378,9 +506,42 @@ tfoot td:first-child { text-align: left; }
         <div class="pi"><span class="pl">최종최소재고 <span class="pu">(개)</span></span><input class="p-inp" id="piT" type="number" value="500" min="0"></div>
       </div>
     </div>
+    <div class="sec">
+      <div class="sec-hd">품질·설비 (SPC 연계)</div>
+      <label class="opt-row"><input type="checkbox" id="qon" onchange="updateQualityPreview()"> 계획에 불량률·가용률 반영</label>
+      <div class="pg" style="margin-top:8px">
+        <div class="pi" style="grid-column:1/3"><span class="pl">불량률 입력 방식</span>
+          <select class="p-inp" id="qmode" style="text-align:left" onchange="updateQualityPreview()"><option value="cap">공정능력 지수 (Pp·Ppk)</option><option value="def">불량률 직접 입력</option></select></div>
+      </div>
+      <div class="pg" id="qcap" style="margin-top:6px">
+        <div class="pi"><span class="pl">Pp <span class="pu">(장기)</span></span><input class="p-inp" id="qpp" type="number" value="1.22" step="0.001" min="0.1" oninput="updateQualityPreview()"></div>
+        <div class="pi"><span class="pl">Ppk <span class="pu">(장기)</span></span><input class="p-inp" id="qppk" type="number" value="1.138" step="0.001" min="0.1" oninput="updateQualityPreview()"></div>
+      </div>
+      <div class="pg" id="qdefrow" style="margin-top:6px;display:none">
+        <div class="pi"><span class="pl">불량률 <span class="pu">(%)</span></span><input class="p-inp" id="qdef" type="number" value="2" step="0.1" min="0" oninput="updateQualityPreview()"></div>
+      </div>
+      <div class="pg" style="margin-top:6px">
+        <div class="pi"><span class="pl">폐기비 <span class="pu">(/불량 1개)</span></span><input class="p-inp" id="qscrap" type="number" value="2" step="0.5" min="0"></div>
+        <div class="pi"><span class="pl">설비 가용률 <span class="pu">(%)</span></span><input class="p-inp" id="qavail" type="number" value="100" step="1" min="1" max="100"></div>
+        <div class="pi"><span class="pl">목표 Ppk</span><input class="p-inp" id="qtarget" type="number" value="1.33" step="0.01" min="0.1"></div>
+      </div>
+      <div class="opt-desc" id="qprev"></div>
+      <div class="opt-desc">Pp·Ppk는 <a href="https://gwagm585-wq.github.io/spc/" target="_blank" rel="noopener">SPC 대시보드 ↗</a>의 공정능력분석 결과를 그대로 입력합니다(기본값: SPC 대시보드 기본 예제). '품질 연계' 탭의 분석은 이 체크와 관계없이 항상 계산됩니다.</div>
+    </div>
+    <div class="sec">
+      <div class="sec-hd">모델 옵션</div>
+      <label class="opt-row"><input type="checkbox" id="pint" checked> 정수해 (인원·수량을 정수로)</label>
+      <div class="opt-desc">끄면 LP 완화해(소수점 허용)를 구합니다. 켜면 분지한계법으로 정수해를 구하고 LP 해와 비교합니다.</div>
+    </div>
+    </div>
+    <div class="in-foot">
+      <span class="in-dirty" id="inDirty" style="display:none">입력이 바뀌었습니다 — 다시 실행하면 02·03에 반영됩니다.</span>
+      <button class="run-btn" onclick="runSolve(true)">최적화 실행 →</button>
+    </div>
   </aside>
 
-  <main class="main">
+  <main class="main" id="optMain" style="display:none">
+    <div class="ctx-bar" id="ctx1"></div>
     <!-- KPI -->
     
 <!-- SNAPSHOT COMPARE PANEL -->
@@ -441,12 +602,17 @@ tfoot td:first-child { text-align: left; }
         <button class="tab-btn" onclick="switchTab(1)">수요 / 생산 / 재고</button>
         <button class="tab-btn" onclick="switchTab(2)">비용 분석</button>
         <button class="tab-btn" onclick="switchTab(3)">인력 분석</button>
+        <button class="tab-btn" onclick="switchTab(4)">품질 연계 (SPC)</button>
       </div>
 
       <!-- TAB 1 -->
       <div class="tab-panel active" id="tp0">
         <div class="rsec">
-          <div class="rhd"><span class="rtitle">월별 총괄생산계획 결과표</span><span class="rbadge">LP 최적해</span></div>
+          <div class="rhd"><span class="rtitle">결과 해석</span><span class="rbadge">자동 요약</span></div>
+          <div class="insight" id="insight"><div class="ph">최적화를 실행하면 결과 해석이 표시됩니다.</div></div>
+        </div>
+        <div class="rsec">
+          <div class="rhd"><span class="rtitle">월별 총괄생산계획 결과표</span><span class="rbadge" id="solBadge">최적해</span></div>
           <div class="twrap" id="mt"><div class="ph">최적화를 실행하면 결과가 표시됩니다.</div></div>
         </div>
         <div class="rsec" id="csec" style="display:none">
@@ -489,7 +655,7 @@ tfoot td:first-child { text-align: left; }
             <div class="cbody"><div style="position:relative;height:240px"><canvas id="ch_cs"></canvas></div></div>
             <div class="legend">
               <div class="lg"><div class="lg-sq" style="background:#e63946"></div>노동비</div>
-              <div class="lg"><div class="lg-sq" style="background:#f4922a"></div>재료비</div>
+              <div class="lg"><div class="lg-sq" style="background:#f4922a"></div>재료·폐기비</div>
               <div class="lg"><div class="lg-sq" style="background:#f7c948"></div>재고비</div>
               <div class="lg"><div class="lg-sq" style="background:#3cb56a"></div>부재고비</div>
               <div class="lg"><div class="lg-sq" style="background:#2563eb"></div>고용/해고비</div>
@@ -510,6 +676,9 @@ tfoot td:first-child { text-align: left; }
       </div>
 
       <!-- TAB 4 -->
+      <div class="tab-panel" id="tp4">
+        <div id="qtab"><div class="ph">최적화를 실행하면 공정능력(불량률)에 따른 생산계획 영향이 표시됩니다.</div></div>
+      </div>
       <div class="tab-panel" id="tp3">
         <div class="chart-grid-1">
           <div class="ccard">
@@ -526,9 +695,38 @@ tfoot td:first-child { text-align: left; }
           <div class="ccard">
             <div class="chead"><span class="ctitle">월별 잔업 시간 (시간)</span></div>
             <div class="cbody"><div style="position:relative;height:180px"><canvas id="ch_ot"></canvas></div></div>
+            <div class="ot-note" id="otNote"></div>
           </div>
         </div>
       </div>
+    </div>
+  </main>
+
+  <!-- PAGE 2: 수요 변동 시뮬레이션 -->
+  <main class="main sim-main" id="simMain" style="display:none">
+    <div class="ctx-bar" id="ctx2"></div>
+    <div class="sim-ctrl">
+      <div class="sim-intro">
+        <b>수요가 예측과 다를 수 있다면, 재고 여유(안전재고)를 얼마나 두는 계획이 가장 경제적일까?</b><br>
+        안전재고를 다음 달 수요의 0~50%로 바꿔가며 계획을 다시 최적화하고, 각 계획을 같은 무작위 수요 시나리오 수백~수천 개로 실행해 <b>기대 총비용</b>과 납기 위험을 비교합니다.
+      </div>
+      <div class="sim-inputs">
+        <label class="sim-field">수요 변동성 (표준편차, 예측 대비 %)
+          <div class="sim-slider"><input type="range" id="simCv" min="0" max="30" step="1" value="10" oninput="document.getElementById('simCvVal').textContent=this.value+'%'"><span id="simCvVal">10%</span></div>
+        </label>
+        <label class="sim-field">반복 횟수
+          <select id="simN"><option value="300">300회</option><option value="1000" selected>1,000회</option><option value="3000">3,000회</option></select>
+        </label>
+        <label class="sim-field sim-chk"><input type="checkbox" id="simOT" checked> 예상보다 부족하면 잔업으로 보충 (잔업 한도 내)</label>
+        <div class="sim-btns">
+          <button class="run-btn" onclick="runSimulation()">시뮬레이션 실행</button>
+          <button class="snap-btn" onclick="simSeed++;runSimulation()">다른 난수로 다시</button>
+        </div>
+      </div>
+      <div class="sim-stale" id="simStale" style="display:none">조건이 바뀌었습니다. 시뮬레이션을 다시 실행하세요.</div>
+    </div>
+    <div class="sim-body" id="simBody">
+      <div class="ph">시뮬레이션 실행을 누르면 결과가 표시됩니다. (계획 최적화를 먼저 자동 실행합니다)</div>
     </div>
   </main>
 </div>
@@ -537,6 +735,8 @@ tfoot td:first-child { text-align: left; }
 var DEFAULTS={D:[1600,3000,3200,3800,2200,2200],pw:4,po:6,ph:300,pl:500,pi:2,ps:5,pp:10,pc:30,pw0:80,pdays:20,phrs:8,pstd:4,potmax:10,pi0:1000,piT:500};
 function resetDefaults(){
   D=DEFAULTS.D.slice();renderDG();
+  var QD={qpp:1.22,qppk:1.138,qdef:2,qscrap:2,qavail:100,qtarget:1.33};Object.keys(QD).forEach(function(k){document.getElementById(k).value=QD[k];});
+  document.getElementById('qon').checked=false;document.getElementById('qmode').value='cap';updateQualityPreview();
   var ids=['pw','po','ph','pl','pi','ps','pp','pc','pw0','pdays','phrs','pstd','potmax','pi0','piT'];
   ids.forEach(function(id){document.getElementById(id).value=DEFAULTS[id];});
   // 결과 초기화
@@ -567,13 +767,15 @@ function resetDefaults(){
     document.getElementById('sv'+i).textContent='—';
   }
   document.getElementById('mt').innerHTML='<div class="ph">최적화를 실행하면 결과가 표시됩니다.</div>';
+  document.getElementById('insight').innerHTML='<div class="ph">최적화를 실행하면 결과 해석이 표시됩니다.</div>';
   document.getElementById('csec').style.display='none';
   window._lastPlan=null;window._lastResult=null;window._lastP=null;
+  window._sim=null;window._inputsDirty=false;document.getElementById('inDirty').style.display='none';updateCtx();
 }
 /* ── TABS ── */
 function switchTab(i){
   document.querySelectorAll('.tab-btn').forEach(function(b,j){b.classList.toggle('active',j===i);});
-  document.querySelectorAll('.tab-panel').forEach(function(p,j){p.classList.toggle('active',j===i);});
+  document.querySelectorAll('.tab-panel').forEach(function(p){p.classList.toggle('active',p.id==='tp'+i);});
 }
 
 /* ── DEMAND UI ── */
@@ -587,81 +789,217 @@ function renderDG(){
   document.getElementById('dg').innerHTML=h;
   document.getElementById('mcnt').textContent='T = '+D.length;
 }
-function addMonth(){D.push(2000);renderDG();}
-function rmMonth(){if(D.length<=2)return;D.pop();renderDG();}
+function addMonth(){D.push(2000);renderDG();markDirty();}
+function markDirty(){if(!window._sim)return;window._inputsDirty=true;var e=document.getElementById('inDirty');if(e)e.style.display='';updateCtx();}
+// SPC 대시보드에서 넘어온 공정능력 받기: ?pp=..&ppk=..&src=spc&var=..
+function importFromSPC(){
+  try{var q=new URLSearchParams(location.search),pp=parseFloat(q.get('pp')),ppk=parseFloat(q.get('ppk'));
+    if(!(pp>0)||!(ppk>0))return;
+    document.getElementById('qpp').value=pp;document.getElementById('qppk').value=ppk;
+    document.getElementById('qmode').value='cap';document.getElementById('qon').checked=true;updateQualityPreview();
+    var v=q.get('var'),d=defectFromCap(pp,ppk),b=document.getElementById('inImport');
+    b.innerHTML='<b>SPC 대시보드에서 공정능력을 가져왔습니다</b>'+(v?' ('+v.replace(/[<>&]/g,'')+')':'')+': Pp '+pp.toFixed(3)+' · Ppk '+ppk.toFixed(3)+' → 예상 불량률 '+(d<0.01?Math.round(d*1e6).toLocaleString('ko-KR')+' ppm':(d*100).toFixed(2)+'%')+'. 품질 반영이 켜졌습니다. 나머지 조건을 확인하고 최적화를 실행하세요.';
+    b.style.display='';
+  }catch(e){}
+}
+document.addEventListener('DOMContentLoaded',function(){showPage(0);importFromSPC();var ip=document.getElementById('inputPage');ip.addEventListener('input',markDirty);ip.addEventListener('change',markDirty);});
+setTimeout(updateQualityPreview,0);
+function rmMonth(){if(D.length<=2)return;D.pop();renderDG();markDirty();}
 renderDG();
 
 function gv(id){return parseFloat(document.getElementById(id).value)||0;}
+/* ── 품질(SPC) 연계: 공정능력 → 불량률 ──
+   정규분포 가정에서 Ppk=min(Z_USL,Z_LSL)/3, Pp=(Z_USL+Z_LSL)/6 이므로
+   가까운 규격까지 z=3·Ppk, 먼 규격까지 z=6·Pp−3·Ppk. 불량률 = Φ(−z_near) + Φ(−z_far).
+   (SPC 대시보드의 '예상 불량률'과 같은 방식: 장기 지수 Pp·Ppk 사용) */
+function normCdf(x){var t=1/(1+0.2316419*Math.abs(x)),d=0.3989422804*Math.exp(-x*x/2);
+  var pr=d*t*(0.3193815+t*(-0.3565638+t*(1.781478+t*(-1.821256+t*1.330274))));return x>0?1-pr:pr;}
+function defectFromCap(Pp,Ppk){if(!(Pp>0)||!(Ppk>0))return 1;var zn=3*Ppk,zf=Math.max(zn,6*Pp-3*Ppk);return Math.min(1,normCdf(-zn)+normCdf(-zf));}
+function qualityInputs(){
+  var mode=document.getElementById('qmode').value,Pp=gv('qpp'),Ppk=gv('qppk'),def;
+  if(mode==='cap')def=defectFromCap(Pp,Ppk);else{def=Math.min(0.99,Math.max(0,gv('qdef')/100));Pp=null;Ppk=null;}
+  return{on:document.getElementById('qon').checked,mode:mode,Pp:Pp,Ppk:Ppk,def:def,scrap:gv('qscrap'),avail:Math.min(100,Math.max(1,gv('qavail')))/100,target:gv('qtarget')};
+}
+function applyQuality(p,y,a,scrap){
+  p.y=y;p.a=a;p.scrap=scrap;p.pCe=p.pC+scrap*(1-y);   // 생산 1개당 재료비 + 기대 폐기비
+  return p;
+}
 function getP(){
   var w=gv('pw'),d=gv('pdays'),h=gv('phrs'),s=gv('pstd');
-  return{wC:w*h*d,oC:gv('po'),hC:gv('ph'),lC:gv('pl'),
+  var p={wC:w*h*d,oC:gv('po'),hC:gv('ph'),lC:gv('pl'),
     iC:gv('pi'),sC:gv('ps'),pC:gv('pp'),cC:gv('pc'),
     prodPW:(h*d)/s,otFac:1/s,otMax:gv('potmax'),
     W0:gv('pw0'),I0:gv('pi0'),IT:gv('piT')};
+  var q=qualityInputs();p.q=q;
+  return q.on?applyQuality(p,1-q.def,q.avail,q.scrap):applyQuality(p,1,1,0);
+}
+function updateQualityPreview(){
+  var q=qualityInputs();
+  document.getElementById('qcap').style.display=q.mode==='cap'?'':'none';
+  document.getElementById('qdefrow').style.display=q.mode==='def'?'':'none';
+  document.getElementById('qprev').innerHTML='예상 불량률 <b>'+(q.def*1e6<10000?Math.round(q.def*1e6).toLocaleString()+' ppm':(q.def*100).toFixed(2)+'%')+'</b> · 양품률 <b>'+((1-q.def)*100).toFixed(q.def<0.001?3:2)+'%</b>'+(q.on?'':' <span style="color:var(--gray4)">(계획에는 미반영)</span>');
 }
 
-/* ── SIMPLEX ── */
-function simplex(c,Aub,bub,Aeq,beq,lo){
-  var EPS=1e-9,MAXIT=40000;
-  var n=c.length,nu=Aub.length,ne=Aeq.length;
-  var bub2=bub.slice(),beq2=beq.slice();
-  if(lo){for(var i=0;i<nu;i++)for(var j=0;j<n;j++)bub2[i]-=Aub[i][j]*(lo[j]||0);
-         for(var i=0;i<ne;i++)for(var j=0;j<n;j++)beq2[i]-=Aeq[i][j]*(lo[j]||0);}
-  var N=n+nu+ne,m=nu+ne,T=[],bas=[];
-  for(var i=0;i<nu;i++){var row=new Array(N+1).fill(0);for(var j=0;j<n;j++)row[j]=Aub[i][j];row[n+i]=1;row[N]=bub2[i];if(row[N]<-EPS){for(var j=0;j<=N;j++)row[j]=-row[j];}T.push(row);bas.push(n+i);}
-  for(var i=0;i<ne;i++){var row=new Array(N+1).fill(0);for(var j=0;j<n;j++)row[j]=Aeq[i][j];row[n+nu+i]=1;row[N]=beq2[i];if(row[N]<-EPS){for(var j=0;j<=N;j++)row[j]=-row[j];}T.push(row);bas.push(n+nu+i);}
-  function pivot(r,c){var pv=T[r][c];for(var j=0;j<=N;j++)T[r][j]/=pv;for(var i=0;i<m;i++){if(i===r)continue;var f=T[i][c];if(Math.abs(f)<EPS)continue;for(var j=0;j<=N;j++)T[i][j]-=f*T[r][j];}bas[r]=c;}
-  function phase(obj,colMax){for(var it=0;it<MAXIT;it++){var enter=-1,minRC=0;for(var j=0;j<colMax;j++){var rc=obj[j]||0;for(var i=0;i<m;i++)rc-=(obj[bas[i]]||0)*T[i][j];if(rc<-EPS&&rc<minRC){minRC=rc;enter=j;}}if(enter<0)break;var leave=-1,minR=Infinity;for(var i=0;i<m;i++){if(T[i][enter]>EPS){var r=T[i][N]/T[i][enter];if(r<minR-EPS){minR=r;leave=i;}}}if(leave<0)return false;pivot(leave,enter);}return true;}
-  var p1=new Array(N).fill(0);for(var i=0;i<ne;i++)p1[n+nu+i]=1;phase(p1,N);
-  for(var i=0;i<m;i++)if(bas[i]>=n+nu&&T[i][N]>1e-6)return null;
-  var p2=new Array(N).fill(0);for(var j=0;j<n;j++)p2[j]=c[j];phase(p2,n+nu);
-  var x=new Array(n).fill(0);for(var i=0;i<m;i++)if(bas[i]<n)x[bas[i]]=T[i][N];
-  if(lo)for(var j=0;j<n;j++)x[j]+=(lo[j]||0);
-  var cost=0;for(var j=0;j<n;j++)cost+=c[j]*x[j];
-  return{x:x,cost:cost};
+/* ── LP SOLVER (2단계 심플렉스, Bland 규칙) ──
+   min c·x  s.t.  Aub·x ≤ bub,  Aeq·x = beq,  lo ≤ x ≤ ub
+   분지한계법에서 하한·상한이 계속 바뀌므로, 우변이 음수가 되어도 동작하도록
+   모든 행에 인공변수를 두고 1단계에서 실행가능해를 찾는다. */
+function solveLP(c,Aub,bub,Aeq,beq,lo,ub){
+  var EPS=1e-9,n=c.length,j,i;
+  lo=lo||new Array(n).fill(0);ub=ub||new Array(n).fill(Infinity);
+  for(j=0;j<n;j++)if(lo[j]>ub[j]+EPS)return{status:'infeasible'};
+  var rows=[],rhs=[],isUb=[];
+  for(i=0;i<Aub.length;i++){var b=bub[i];for(j=0;j<n;j++)b-=Aub[i][j]*lo[j];rows.push(Aub[i]);rhs.push(b);isUb.push(true);}
+  for(j=0;j<n;j++)if(isFinite(ub[j])){var r=new Array(n).fill(0);r[j]=1;rows.push(r);rhs.push(ub[j]-lo[j]);isUb.push(true);}
+  for(i=0;i<Aeq.length;i++){var b2=beq[i];for(j=0;j<n;j++)b2-=Aeq[i][j]*lo[j];rows.push(Aeq[i]);rhs.push(b2);isUb.push(false);}
+  var m=rows.length,nS=0,slackCol=[];
+  for(i=0;i<m;i++){slackCol.push(isUb[i]?n+nS:-1);if(isUb[i])nS++;}
+  var nA=m,N=n+nS+nA,T=[],bas=[];
+  for(i=0;i<m;i++){
+    var row=new Array(N+1).fill(0);
+    for(j=0;j<n;j++)row[j]=rows[i][j];
+    if(slackCol[i]>=0)row[slackCol[i]]=1;
+    row[N]=rhs[i];
+    if(row[N]<0)for(j=0;j<=N;j++)row[j]=-row[j];
+    row[n+nS+i]=1;T.push(row);bas.push(n+nS+i);
+  }
+  function pivot(r,col){var pv=T[r][col],k;for(k=0;k<=N;k++)T[r][k]/=pv;
+    for(var q=0;q<m;q++){if(q===r)continue;var f=T[q][col];if(f===0)continue;for(k=0;k<=N;k++)T[q][k]-=f*T[r][k];}bas[r]=col;}
+  function run(cost,colMax){
+    for(var it=0;it<20000;it++){
+      var enter=-1;
+      for(var jj=0;jj<colMax;jj++){var rc=cost[jj];for(var q=0;q<m;q++)if(cost[bas[q]])rc-=cost[bas[q]]*T[q][jj];
+        if(rc<-1e-9){enter=jj;break;}}
+      if(enter<0)return 'optimal';
+      var leave=-1,best=Infinity;
+      for(var q2=0;q2<m;q2++){if(T[q2][enter]>1e-9){var ratio=T[q2][N]/T[q2][enter];
+        if(ratio<best-1e-12||(Math.abs(ratio-best)<=1e-12&&bas[q2]<bas[leave])){best=ratio;leave=q2;}}}
+      if(leave<0)return 'unbounded';
+      pivot(leave,enter);
+    }
+    return 'iterlimit';
+  }
+  var c1=new Array(N).fill(0);for(i=0;i<nA;i++)c1[n+nS+i]=1;
+  run(c1,N);
+  var infeas=0;for(i=0;i<m;i++)if(bas[i]>=n+nS)infeas+=T[i][N];
+  if(infeas>1e-6)return{status:'infeasible'};
+  // 기저에 남은 인공변수(값 0)를 가능하면 밀어냄
+  for(i=0;i<m;i++)if(bas[i]>=n+nS){for(j=0;j<n+nS;j++)if(Math.abs(T[i][j])>1e-9){pivot(i,j);break;}}
+  var c2=new Array(N).fill(0);for(j=0;j<n;j++)c2[j]=c[j];
+  var st=run(c2,n+nS);
+  if(st!=='optimal')return{status:st};
+  var x=lo.slice();for(i=0;i<m;i++)if(bas[i]<n)x[bas[i]]+=T[i][N];
+  var cost=0;for(j=0;j<n;j++)cost+=c[j]*x[j];
+  return{status:'optimal',x:x,cost:cost};
+}
+
+/* ── 정수계획 (분지한계법) ── intIdx: 정수여야 하는 변수 인덱스, opt.priority: 분지 우선순위 그룹 */
+function solveMIP(c,Aub,bub,Aeq,beq,lo,intIdx,opt){
+  opt=opt||{};var maxNodes=opt.maxNodes||50000,timeLimit=opt.timeLimit||4000,t0=Date.now();
+  var gapTol=opt.gapTol!=null?opt.gapTol:1e-4;   // 상대 최적성 갭 0.01% 이내면 종료
+  var groups=opt.priority||[intIdx];
+  var n=c.length,root=solveLP(c,Aub,bub,Aeq,beq,lo,null);
+  if(root.status!=='optimal')return null;
+  var best=null,nodes=0,complete=true;
+  var stack=[{lo:lo.slice(),ub:new Array(n).fill(Infinity),sol:root}];
+  while(stack.length){
+    if(nodes>=maxNodes||Date.now()-t0>timeLimit){complete=false;break;}
+    var nd=stack.pop(),s=nd.sol;
+    if(!s){s=solveLP(c,Aub,bub,Aeq,beq,nd.lo,nd.ub);nodes++;}
+    if(s.status!=='optimal')continue;
+    if(best&&s.cost>=best.cost-gapTol*Math.abs(best.cost)-1e-6)continue;
+    // 분지 변수: 우선순위 그룹(예: 인원) 먼저, 그룹 안에서는 가장 소수부가 큰 변수
+    var bj=-1,bf=0;
+    for(var g=0;g<groups.length&&bj<0;g++){var grp=groups[g];
+      for(var k=0;k<grp.length;k++){var j=grp[k],f=s.x[j]-Math.floor(s.x[j]);var d=Math.min(f,1-f);if(d>1e-6&&d>bf){bf=d;bj=j;}}}
+    if(bj<0){best={x:s.x.map(function(v,idx){return intIdx.indexOf(idx)>=0?Math.round(v):v;}),cost:s.cost};continue;}
+    var v=s.x[bj];
+    var dn={lo:nd.lo.slice(),ub:nd.ub.slice()};dn.ub[bj]=Math.floor(v);
+    var up={lo:nd.lo.slice(),ub:nd.ub.slice()};up.lo[bj]=Math.ceil(v);
+    if(v-Math.floor(v)<0.5){stack.push(up);stack.push(dn);}else{stack.push(dn);stack.push(up);}
+  }
+  if(!best)return null;
+  return{x:best.x,cost:best.cost,lpCost:root.cost,nodes:nodes,proven:complete};
 }
 
 /* ── LP MODEL ── */
-function buildAndSolve(Darr,p){
+function buildAndSolve(Darr,p,useInt,opts){
+  opts=opts||{};
   var TH=Darr.length;
   var iW=function(t){return t-1;},iH=function(t){return TH+t-1;},iL=function(t){return 2*TH+t-1;},
       iP=function(t){return 3*TH+t-1;},iI=function(t){return 4*TH+t-1;},
       iS=function(t){return 5*TH+t-1;},iC=function(t){return 6*TH+t-1;},iO=function(t){return 7*TH+t-1;};
   var N=8*TH,zr=function(){return new Array(N).fill(0);};
   var c=new Array(N).fill(0);
-  for(var t=1;t<=TH;t++){c[iW(t)]=p.wC;c[iH(t)]=p.hC;c[iL(t)]=p.lC;c[iP(t)]=p.pC;c[iI(t)]=p.iC;c[iS(t)]=p.sC;c[iC(t)]=p.cC;c[iO(t)]=p.oC;}
+  for(var t=1;t<=TH;t++){c[iW(t)]=p.wC;c[iH(t)]=p.hC;c[iL(t)]=p.lC;c[iP(t)]=p.pCe;c[iI(t)]=p.iC;c[iS(t)]=p.sC;c[iC(t)]=p.cC;c[iO(t)]=p.oC;}
   var Aub=[],bub=[],Aeq=[],beq=[],r;
   for(var t=1;t<=TH;t++){
     r=zr();r[iW(t)]=1;r[iH(t)]=-1;r[iL(t)]=1;
     if(t===1){Aeq.push(r);beq.push(p.W0);}else{r[iW(t-1)]=-1;Aeq.push(r);beq.push(0);}
-    r=zr();r[iP(t)]=1;r[iW(t)]=-p.prodPW;r[iO(t)]=-p.otFac;Aub.push(r);bub.push(0);
-    r=zr();r[iI(t)]=-1;r[iP(t)]=1;r[iC(t)]=1;r[iS(t)]=1;
+    r=zr();r[iP(t)]=1;r[iW(t)]=-p.a*p.prodPW;r[iO(t)]=-p.a*p.otFac;Aub.push(r);bub.push(0);   // 설비 가용률 반영
+    r=zr();r[iI(t)]=-1;r[iP(t)]=p.y;r[iC(t)]=1;r[iS(t)]=1;   // 생산 중 양품(P×양품률)만 재고로
     if(t===1){Aeq.push(r);beq.push(Darr[0]-p.I0);}else{r[iI(t-1)]=1;r[iS(t-1)]=-1;Aeq.push(r);beq.push(Darr[t-1]);}
     r=zr();r[iO(t)]=1;r[iW(t)]=-p.otMax;Aub.push(r);bub.push(0);
   }
   r=zr();r[iS(TH)]=1;Aeq.push(r);beq.push(0);
   var lo=new Array(N).fill(0);lo[iI(TH)]=p.IT;
-  return simplex(c,Aub,bub,Aeq,beq,lo);
+  // 안전재고: 매달 말 순재고(재고−부재고) ≥ 다음 달 수요의 ss%, 마지막 달은 최종목표 + 그 달 수요의 ss%
+  // (재고와 부재고를 동시에 두는 편법을 막기 위해 '순재고'에 제약을 건다)
+  if(opts.ss>0){for(t=1;t<=TH;t++){r=zr();r[iI(t)]=-1;r[iS(t)]=1;Aub.push(r);
+    bub.push(-(t<TH?opts.ss*Darr[t]:p.IT+opts.ss*Darr[TH-1]));}}
+  // 정수 변수: 인원(W,H,L)과 수량(P,I,S,C). 잔업시간(O)은 연속. 인원 변수를 먼저 분지
+  var people=[],units=[];
+  for(var k=0;k<3*TH;k++)people.push(k);
+  // 양품률<1이면 수량은 불량을 감안한 기대값이라 정수 조건이 의미가 없으므로 인원(W·H·L)만 정수로 둔다
+  if(!(p.y<1-1e-12))for(k=3*TH;k<7*TH;k++)units.push(k);
+  // extra: 추가 등식 제약 [[계수행, 우변], ...] — 전략 비교용
+  function solveWith(extra){
+    var Ae=Aeq.slice(),be=beq.slice();
+    (extra||[]).forEach(function(e){Ae.push(e[0]);be.push(e[1]);});
+    var lp=solveLP(c,Aub,bub,Ae,be,lo,null);
+    if(lp.status!=='optimal')return null;
+    if(!useInt)return{x:lp.x,cost:lp.cost,lpCost:lp.cost,lpX:lp.x,integer:false,proven:true};
+    var mip=solveMIP(c,Aub,bub,Ae,be,lo,people.concat(units),{priority:[people,units],timeLimit:extra?1500:4000});
+    if(!mip)return null;
+    return{x:mip.x,cost:mip.cost,lpCost:lp.cost,lpX:lp.x,integer:true,proven:mip.proven,nodes:mip.nodes};
+  }
+  var best=solveWith(null);
+  if(!best)return null;
+  if(opts.noStrat)return best;
+  // 비교 전략 1) 평준화(level): 전 기간 인원 동일 (1월에만 인원 조정)
+  var lvl=[];for(t=1;t<TH;t++){r=zr();r[iW(t)]=1;r[iW(t+1)]=-1;lvl.push([r,0]);}
+  // 비교 전략 2) 추종(chase): 마지막 달 외에는 재고 0, 부재고·외주·잔업 없이 인원 조정으로만 수요를 맞춤
+  var chs=[];for(t=1;t<=TH;t++){
+    if(t<TH){r=zr();r[iI(t)]=1;chs.push([r,0]);}
+    r=zr();r[iS(t)]=1;chs.push([r,0]);r=zr();r[iC(t)]=1;chs.push([r,0]);r=zr();r[iO(t)]=1;chs.push([r,0]);}
+  var lv=solveWith(lvl),ch=solveWith(chs);
+  function summary(x){if(!x)return null;var W=[],h=0,l=0,inv=0,s=0,cc=0;
+    for(var t2=1;t2<=TH;t2++){W.push(x.x[iW(t2)]);h+=x.x[iH(t2)];l+=x.x[iL(t2)];inv+=x.x[iI(t2)];s+=x.x[iS(t2)];cc+=x.x[iC(t2)];}
+    return{cost:x.cost,x:x.x,wMin:Math.min.apply(null,W),wMax:Math.max.apply(null,W),hire:h,fire:l,inv:inv,back:s,sub:cc};}
+  best.strategies={opt:summary(best),level:summary(lv),chase:summary(ch)};
+  return best;
 }
 
 /* ── CHARTS ── */
 Chart.register(ChartDataLabels);
+Chart.defaults.font.family="'Barlow Condensed','IBM Plex Sans KR',sans-serif";Chart.defaults.font.size=12;
 var charts={};
 function mkChart(id,cfg){if(charts[id])charts[id].destroy();charts[id]=new Chart(document.getElementById(id).getContext('2d'),cfg);}
 
 var baseScales={
-  x:{grid:{color:'rgba(0,0,0,.06)',lineWidth:.8},ticks:{color:'#4a5263',font:{family:"'IBM Plex Mono'",size:11,weight:'600'}},border:{color:'#c8cdd6'}},
-  y:{grid:{color:'rgba(0,0,0,.06)',lineWidth:.8},ticks:{color:'#4a5263',font:{family:"'IBM Plex Mono'",size:11,weight:'600'}},border:{color:'#c8cdd6'}}
+  x:{grid:{color:'rgba(0,0,0,.06)',lineWidth:.8},ticks:{color:'#4a5263',font:{family:"'Barlow Condensed','IBM Plex Sans KR',sans-serif",size:11,weight:'600'}},border:{color:'#c8cdd6'}},
+  y:{grid:{color:'rgba(0,0,0,.06)',lineWidth:.8},ticks:{color:'#4a5263',font:{family:"'Barlow Condensed','IBM Plex Sans KR',sans-serif",size:11,weight:'600'}},border:{color:'#c8cdd6'}}
 };
-var baseTip={backgroundColor:'rgba(17,19,24,.92)',borderColor:'rgba(0,0,0,.15)',borderWidth:1,titleColor:'#e2e6eb',bodyColor:'#ffffff',titleFont:{family:"'IBM Plex Mono'",size:11},bodyFont:{family:"'IBM Plex Mono'",size:11},padding:10};
+var baseTip={backgroundColor:'rgba(17,19,24,.92)',borderColor:'rgba(0,0,0,.15)',borderWidth:1,titleColor:'#e2e6eb',bodyColor:'#ffffff',titleFont:{family:"'Barlow Condensed','IBM Plex Sans KR',sans-serif",size:11},bodyFont:{family:"'Barlow Condensed','IBM Plex Sans KR',sans-serif",size:11},padding:10};
 function bOpts(ex){return Object.assign({responsive:true,maintainAspectRatio:false,animation:{duration:500},plugins:{legend:{display:false},tooltip:baseTip},scales:baseScales},ex||{});}
 
 /* ── RENDER ── */
-function fv(v){return Math.abs(v)<0.05?'<span class="zt">—</span>':v.toFixed(1);}
+function fv(v){if(Math.abs(v)<0.05)return '<span class="zt">—</span>';return Math.abs(v-Math.round(v))<1e-6?Math.round(v).toLocaleString('ko-KR'):v.toFixed(1);}
+function fn(v){return Math.abs(v-Math.round(v))<1e-6?Math.round(v).toLocaleString('ko-KR'):v.toFixed(1);}
 function fc(v){return Math.round(v).toLocaleString('ko-KR');}
 
 function render(plan,cost,p,_res){
-  var res_dummy={cost:cost};
+  var res_dummy=(_res&&_res.lpCost!=null)?_res:{cost:cost};
   var TH=plan.length,totD=0,totP=0,totC=0,totS=0;
   plan.forEach(function(r){totD+=r.D;totP+=r.P+r.C;totC+=r.C;totS+=r.S;});
   var finI=plan[TH-1].I;
@@ -676,8 +1014,11 @@ function render(plan,cost,p,_res){
     document.getElementById('kc'+i).className='kcard'+(st?' '+st:'');
   }
   setK(0,fc(Math.round(cost)),'최솟값','ok');
-  var sr=Math.min(100,totP/totD*100);
-  setK(1,fc(Math.round(totP)),sr>=99.9?'수요 충족':'⚠ 수요 미달',sr>=99.9?'ok':'bad');
+  // 납기 내 충족률: 새로 부재고가 된 수량(부재고 증가분)을 제외한 비율. 초기재고가 있으므로 생산량/수요로 계산하면 안 됨
+  var late=0;plan.forEach(function(r,i){late+=Math.max(0,r.S-(i>0?plan[i-1].S:0));});
+  var sr=totD>0?(1-late/totD)*100:100;
+  var goodSup=0;plan.forEach(function(r){goodSup+=r.P*p.y+r.C;});var supplyOK=p.I0+goodSup+0.5>=totD+p.IT;
+  setK(1,fc(Math.round(totP)),supplyOK?'초기재고 포함 수요 충족':'⚠ 공급 부족',supplyOK?'ok':'bad');
   setK(2,fc(Math.round(finI)),finI>=p.IT?'목표 달성':'⚠ 목표 미달',finI>=p.IT?'ok':'bad');
   setK(3,fc(Math.round(totC)),totC>0.05?'외주 발생':'외주 없음',totC>0.05?'warn':'ok');
   setK(4,fc(Math.round(totS)),totS>0.05?'⚠ 부재고 발생':'정상',totS>0.05?'bad':'ok');
@@ -689,7 +1030,7 @@ function render(plan,cost,p,_res){
     document.getElementById('sv'+i).textContent=val;
     document.getElementById('sd'+i).textContent=desc;
   }
-  setSig(0,sr>=99.9?'ok':'bad',sr.toFixed(1)+'%','수요충족률 '+(sr>=99.9?'정상':'미달'));
+  setSig(0,sr>=99.9?'ok':sr>=97?'warn':'bad',sr.toFixed(1)+'%','납기 내 충족률'+(late>0.5?' (지연 '+fc(late)+'개)':''));
   setSig(1,finI>=p.IT?'ok':'bad',fc(Math.round(finI))+'개','최종재고 '+(finI>=p.IT?'목표달성':'기준미달'));
   var chg=plan.filter(function(r){return r.H>0.05||r.L>0.05;}).length;
   setSig(2,chg<=2?'ok':chg<=4?'warn':'bad',chg+'회','인력변동 '+(chg<=2?'안정':'불안정'));
@@ -697,8 +1038,14 @@ function render(plan,cost,p,_res){
   /* HEADER */
   var hc=document.getElementById('hCost');
   hc.textContent=fc(Math.round(cost))+' 천원';hc.className='hdr-stat-val ok';
-  document.getElementById('hStatus').textContent='OPTIMAL';
-  document.getElementById('hStatus').className='hdr-stat-val ok';
+  var res0=_res||{};
+  document.getElementById('hStatus').textContent=res0.integer?(res0.proven?'OPTIMAL · 정수':'정수해 (시간제한)'):'OPTIMAL · LP';
+  document.getElementById('hStatus').className='hdr-stat-val '+(res0.integer&&!res0.proven?'warn':'ok');
+  document.getElementById('solBadge').textContent=res0.integer?'정수 최적해 (MIP)':'LP 최적해 (소수점 허용)';
+  document.getElementById('insight').innerHTML=buildInsights(plan,p,res0,totD,late);
+  var otTot=plan.reduce(function(a,r){return a+r.O;},0);
+  var otUnit=(p.oC/(p.otFac*p.a)+p.pCe)/p.y,subUnit=p.cC;
+  document.getElementById('otNote').textContent=otTot<0.05?('이번 계획에서는 잔업을 쓰지 않았습니다. 잔업으로 1개 더 만드는 비용('+fn(otUnit)+')'+(otUnit>subUnit?'이 외주 단가('+fn(subUnit)+')보다 비싸기 때문입니다.':'보다 다른 수단이 유리했기 때문입니다.')):'';
 
   /* TABLE 1 */
   var rows='',tH=0,tL=0,tP=0,tO=0;
@@ -706,9 +1053,9 @@ function render(plan,cost,p,_res){
   rows+='<tr style="background:var(--gray1);color:var(--gray5)">'
     +'<td><b>초기(T=0)</b></td>'
     +'<td>—</td>'
-    +'<td>'+p.W0.toFixed(1)+'</td>'
+    +'<td>'+fn(p.W0)+'</td>'
     +'<td>—</td><td>—</td><td>—</td><td>—</td><td>—</td>'
-    +'<td>'+p.I0.toFixed(1)+'</td>'
+    +'<td>'+fn(p.I0)+'</td>'
     +'<td>—</td>'
     +'</tr>';
   plan.forEach(function(r){
@@ -728,16 +1075,16 @@ function render(plan,cost,p,_res){
     +'<th>생산(P)</th><th>외주(C)</th><th>잔업(O)</th><th>재고(I)</th><th>부재고(S)</th></tr></thead>'
     +'<tbody>'+rows+'</tbody>'
     +'<tfoot><tr><td>합계</td><td>'+totD.toLocaleString()+'</td><td>—</td>'
-    +'<td>'+tH.toFixed(1)+'</td><td>'+tL.toFixed(1)+'</td>'
-    +'<td>'+tP.toFixed(1)+'</td><td>'+totC.toFixed(1)+'</td>'
-    +'<td>'+tO.toFixed(1)+'</td><td>—</td><td>'+totS.toFixed(1)+'</td>'
+    +'<td>'+fn(tH)+'</td><td>'+fn(tL)+'</td>'
+    +'<td>'+fn(tP)+'</td><td>'+fn(totC)+'</td>'
+    +'<td>'+fn(tO)+'</td><td>—</td><td>'+fn(totS)+'</td>'
     +'</tr></tfoot></table>';
 
   /* TABLE 2 */
   var crow='',tW=0,tO2=0,thC=0,tlC=0,tpC=0,tiC=0,tsC=0,tcC=0;
   plan.forEach(function(r){
     var cW=r.W*p.wC,cO=r.O*p.oC,cH=r.H*p.hC,cL=r.L*p.lC;
-    var cP=r.P*p.pC,cI=r.I*p.iC,cS=r.S*p.sC,cC=r.C*p.cC;
+    var cP=r.P*p.pCe,cI=r.I*p.iC,cS=r.S*p.sC,cC=r.C*p.cC;
     var tot=cW+cO+cH+cL+cP+cI+cS+cC;
     tW+=cW;tO2+=cO;thC+=cH;tlC+=cL;tpC+=cP;tiC+=cI;tsC+=cS;tcC+=cC;
     crow+='<tr><td>'+r.t+'월</td><td>'+fc(cW)+'</td>'
@@ -751,7 +1098,7 @@ function render(plan,cost,p,_res){
   });
   document.getElementById('ct').innerHTML=
     '<table><thead><tr><th>기간</th><th>노동비</th><th>잔업비</th><th>고용비</th>'
-    +'<th>해고비</th><th>재료비</th><th>재고비</th><th>부재고비</th><th>하청비</th><th>합계</th></tr></thead>'
+    +'<th>해고비</th><th>재료·폐기비</th><th>재고비</th><th>부재고비</th><th>하청비</th><th>합계</th></tr></thead>'
     +'<tbody>'+crow+'</tbody>'
     +'<tfoot><tr><td>합계</td>'
     +'<td>'+fc(tW)+'</td><td>'+fc(tO2)+'</td><td>'+fc(thC)+'</td><td>'+fc(tlC)+'</td>'
@@ -762,19 +1109,19 @@ function render(plan,cost,p,_res){
   /* CHART 1: Demand vs Prod */
   mkChart('ch_dp',{type:'bar',data:{labels:labels,datasets:[
     {label:'수요(D)',data:plan.map(function(r){return r.D;}),backgroundColor:'rgba(192,57,43,.65)',borderColor:'#c0392b',borderWidth:2,datalabels:{anchor:'end',align:'end',
-      font:{family:"'IBM Plex Mono'",size:10,weight:'700'},
+      font:{family:"'Barlow Condensed','IBM Plex Sans KR',sans-serif",size:10,weight:'700'},
       color:'#4a5263',
       formatter:function(v){if(Math.abs(v)<0.05)return '';if(Math.abs(v)>=1000)return Math.round(Math.abs(v)/1000*10)/10+'k';return Math.round(Math.abs(v)*10)/10;},
       display:function(ctx){return Math.abs(ctx.dataset.data[ctx.dataIndex])>0.05;}
     }},
     {label:'생산(P)',data:plan.map(function(r){return r.P;}),backgroundColor:'rgba(26,86,219,.65)',borderColor:'#1a56db',borderWidth:2,datalabels:{anchor:'end',align:'end',
-      font:{family:"'IBM Plex Mono'",size:10,weight:'700'},
+      font:{family:"'Barlow Condensed','IBM Plex Sans KR',sans-serif",size:10,weight:'700'},
       color:'#4a5263',
       formatter:function(v){if(Math.abs(v)<0.05)return '';if(Math.abs(v)>=1000)return Math.round(Math.abs(v)/1000*10)/10+'k';return Math.round(Math.abs(v)*10)/10;},
       display:function(ctx){return Math.abs(ctx.dataset.data[ctx.dataIndex])>0.05;}
     }},
     {label:'외주(C)',data:plan.map(function(r){return r.C;}),backgroundColor:'rgba(217,119,6,.65)',borderColor:'#d97706',borderWidth:2,datalabels:{anchor:'end',align:'end',
-      font:{family:"'IBM Plex Mono'",size:10,weight:'700'},
+      font:{family:"'Barlow Condensed','IBM Plex Sans KR',sans-serif",size:10,weight:'700'},
       color:'#4a5263',
       formatter:function(v){if(Math.abs(v)<0.05)return '';if(Math.abs(v)>=1000)return Math.round(Math.abs(v)/1000*10)/10+'k';return Math.round(Math.abs(v)*10)/10;},
       display:function(ctx){return Math.abs(ctx.dataset.data[ctx.dataIndex])>0.05;}
@@ -784,13 +1131,13 @@ function render(plan,cost,p,_res){
   /* CHART 2: Inventory */
   var invDatasets=[
     {label:'재고(I)',data:plan.map(function(r){return r.I;}),borderColor:'#1a56db',backgroundColor:'rgba(26,86,219,.08)',borderWidth:2.5,pointRadius:5,pointBackgroundColor:'#fff',pointBorderColor:'#1a56db',pointBorderWidth:2,fill:true,tension:.35,datalabels:{anchor:'end',align:function(ctx){return ctx.dataIndex===0?'right':'top';},offset:4,
-      font:{family:"'IBM Plex Mono'",size:10,weight:'700'},
+      font:{family:"'Barlow Condensed','IBM Plex Sans KR',sans-serif",size:10,weight:'700'},
       color:'#4a5263',
       formatter:function(v){if(v===null||Math.abs(v)<0.05)return '';if(Math.abs(v)>=1000)return Math.round(Math.abs(v)/1000*10)/10+'k';return Math.round(Math.abs(v)*10)/10;},
       display:function(ctx){return ctx.dataset.data[ctx.dataIndex]!==null&&Math.abs(ctx.dataset.data[ctx.dataIndex])>0.05;}
     }},
     {label:'부재고(S)',data:plan.map(function(r){return r.S;}),borderColor:'#c0392b',backgroundColor:'rgba(192,57,43,.08)',borderWidth:2.5,pointRadius:5,pointBackgroundColor:'#fff',pointBorderColor:'#c0392b',pointBorderWidth:2,fill:true,tension:.35,datalabels:{anchor:'end',align:function(ctx){return ctx.dataIndex===0?'right':'top';},offset:4,
-      font:{family:"'IBM Plex Mono'",size:10,weight:'700'},
+      font:{family:"'Barlow Condensed','IBM Plex Sans KR',sans-serif",size:10,weight:'700'},
       color:'#4a5263',
       formatter:function(v){if(v===null||Math.abs(v)<0.05)return '';if(Math.abs(v)>=1000)return Math.round(Math.abs(v)/1000*10)/10+'k';return Math.round(Math.abs(v)*10)/10;},
       display:function(ctx){return ctx.dataset.data[ctx.dataIndex]!==null&&Math.abs(ctx.dataset.data[ctx.dataIndex])>0.05;}
@@ -807,66 +1154,66 @@ function render(plan,cost,p,_res){
   /* CHART 3: Cost stack */
   mkChart('ch_cs',{type:'bar',data:{labels:labels,datasets:[
     {label:'노동비',data:plan.map(function(r){return Math.round(r.W*p.wC);}),backgroundColor:'rgba(230,57,70,.65)',borderColor:'#e63946',borderWidth:2,stack:'s',datalabels:{anchor:'center',align:'center',
-      font:{family:"'IBM Plex Mono'",size:9,weight:'700'},
+      font:{family:"'Barlow Condensed','IBM Plex Sans KR',sans-serif",size:9,weight:'700'},
       color:'#ffffff',
       formatter:function(v){if(Math.abs(v)<1000)return '';return Math.round(Math.abs(v)/1000*10)/10+'k';},
       display:function(ctx){return Math.abs(ctx.dataset.data[ctx.dataIndex])>500;}
     }},
-    {label:'재료비',data:plan.map(function(r){return Math.round(r.P*p.pC);}),backgroundColor:'rgba(244,146,42,.65)',borderColor:'#f4922a',borderWidth:2,stack:'s',datalabels:{anchor:'center',align:'center',
-      font:{family:"'IBM Plex Mono'",size:9,weight:'700'},
+    {label:'재료·폐기비',data:plan.map(function(r){return Math.round(r.P*p.pCe);}),backgroundColor:'rgba(244,146,42,.65)',borderColor:'#f4922a',borderWidth:2,stack:'s',datalabels:{anchor:'center',align:'center',
+      font:{family:"'Barlow Condensed','IBM Plex Sans KR',sans-serif",size:9,weight:'700'},
       color:'#ffffff',
       formatter:function(v){if(Math.abs(v)<1000)return '';return Math.round(Math.abs(v)/1000*10)/10+'k';},
       display:function(ctx){return Math.abs(ctx.dataset.data[ctx.dataIndex])>500;}
     }},
     {label:'재고비',data:plan.map(function(r){return Math.round(r.I*p.iC);}),backgroundColor:'rgba(247,201,72,.65)',borderColor:'#f7c948',borderWidth:2,stack:'s',datalabels:{anchor:'center',align:'center',
-      font:{family:"'IBM Plex Mono'",size:9,weight:'700'},
+      font:{family:"'Barlow Condensed','IBM Plex Sans KR',sans-serif",size:9,weight:'700'},
       color:'#ffffff',
       formatter:function(v){if(Math.abs(v)<1000)return '';return Math.round(Math.abs(v)/1000*10)/10+'k';},
       display:function(ctx){return Math.abs(ctx.dataset.data[ctx.dataIndex])>500;}
     }},
     {label:'부재고비',data:plan.map(function(r){return Math.round(r.S*p.sC);}),backgroundColor:'rgba(60,181,106,.65)',borderColor:'#3cb56a',borderWidth:2,stack:'s',datalabels:{anchor:'center',align:'center',
-      font:{family:"'IBM Plex Mono'",size:9,weight:'700'},
+      font:{family:"'Barlow Condensed','IBM Plex Sans KR',sans-serif",size:9,weight:'700'},
       color:'#ffffff',
       formatter:function(v){if(Math.abs(v)<1000)return '';return Math.round(Math.abs(v)/1000*10)/10+'k';},
       display:function(ctx){return Math.abs(ctx.dataset.data[ctx.dataIndex])>500;}
     }},
     {label:'고용/해고',data:plan.map(function(r){return Math.round(r.H*p.hC+r.L*p.lC);}),backgroundColor:'rgba(37,99,235,.65)',borderColor:'#2563eb',borderWidth:2,stack:'s',datalabels:{anchor:'center',align:'center',
-      font:{family:"'IBM Plex Mono'",size:9,weight:'700'},
+      font:{family:"'Barlow Condensed','IBM Plex Sans KR',sans-serif",size:9,weight:'700'},
       color:'#ffffff',
       formatter:function(v){if(Math.abs(v)<1000)return '';return Math.round(Math.abs(v)/1000*10)/10+'k';},
       display:function(ctx){return Math.abs(ctx.dataset.data[ctx.dataIndex])>500;}
     }},
     {label:'잔업/하청',data:plan.map(function(r){return Math.round(r.O*p.oC+r.C*p.cC);}),backgroundColor:'rgba(147,51,234,.65)',borderColor:'#9333ea',borderWidth:2,stack:'s',datalabels:{anchor:'center',align:'center',
-      font:{family:"'IBM Plex Mono'",size:9,weight:'700'},
+      font:{family:"'Barlow Condensed','IBM Plex Sans KR',sans-serif",size:9,weight:'700'},
       color:'#ffffff',
       formatter:function(v){if(Math.abs(v)<1000)return '';return Math.round(Math.abs(v)/1000*10)/10+'k';},
       display:function(ctx){return Math.abs(ctx.dataset.data[ctx.dataIndex])>500;}
     }},
-  ]},options:bOpts({scales:{x:{stacked:true,grid:{color:'rgba(0,0,0,.06)'},ticks:{color:'#4a5263',font:{family:"'IBM Plex Mono'",size:11,weight:'600'}},border:{color:'#c8cdd6'}},y:{stacked:true,grid:{color:'rgba(0,0,0,.06)'},ticks:{color:'#4a5263',font:{family:"'IBM Plex Mono'",size:11,weight:'600'}},border:{color:'#c8cdd6'}}}})});
+  ]},options:bOpts({scales:{x:{stacked:true,grid:{color:'rgba(0,0,0,.06)'},ticks:{color:'#4a5263',font:{family:"'Barlow Condensed','IBM Plex Sans KR',sans-serif",size:11,weight:'600'}},border:{color:'#c8cdd6'}},y:{stacked:true,grid:{color:'rgba(0,0,0,.06)'},ticks:{color:'#4a5263',font:{family:"'Barlow Condensed','IBM Plex Sans KR',sans-serif",size:11,weight:'600'}},border:{color:'#c8cdd6'}}}})});
 
   /* CHART 4: Pie */
   var tW2=0,tO3=0,thC2=0,tlC2=0,tpC2=0,tiC2=0,tsC2=0,tcC2=0;
-  plan.forEach(function(r){tW2+=r.W*p.wC;tO3+=r.O*p.oC;thC2+=r.H*p.hC;tlC2+=r.L*p.lC;tpC2+=r.P*p.pC;tiC2+=r.I*p.iC;tsC2+=r.S*p.sC;tcC2+=r.C*p.cC;});
+  plan.forEach(function(r){tW2+=r.W*p.wC;tO3+=r.O*p.oC;thC2+=r.H*p.hC;tlC2+=r.L*p.lC;tpC2+=r.P*p.pCe;tiC2+=r.I*p.iC;tsC2+=r.S*p.sC;tcC2+=r.C*p.cC;});
   mkChart('ch_pie',{type:'doughnut',data:{
-    labels:['노동비','재료비','재고비','부재고비','고용/해고','잔업/하청'],
+    labels:['노동비','재료·폐기비','재고비','부재고비','고용/해고','잔업/하청'],
     datasets:[{data:[tW2,tpC2,tiC2,tsC2,thC2+tlC2,tO3+tcC2],
       backgroundColor:['rgba(230,57,70,.65)','rgba(244,146,42,.65)','rgba(247,201,72,.65)','rgba(60,181,106,.65)','rgba(37,99,235,.65)','rgba(147,51,234,.65)'],
       borderColor:['#e63946','#f4922a','#f7c948','#3cb56a','#2563eb','#9333ea'],borderWidth:1.5}]
   },options:{responsive:true,maintainAspectRatio:false,animation:{duration:500},cutout:'58%',
-    plugins:{legend:{display:true,position:'right',labels:{color:'#111318',font:{family:"'IBM Plex Mono'",size:12,weight:'600'},boxWidth:12,padding:10}},
+    plugins:{legend:{display:true,position:'right',labels:{color:'#111318',font:{family:"'Barlow Condensed','IBM Plex Sans KR',sans-serif",size:12,weight:'600'},boxWidth:12,padding:10}},
       tooltip:baseTip,
-      datalabels:{color:'#fff',font:{family:"'IBM Plex Mono'",size:11,weight:'700'},
+      datalabels:{color:'#fff',font:{family:"'Barlow Condensed','IBM Plex Sans KR',sans-serif",size:11,weight:'700'},
         formatter:function(v,ctx){var sum=ctx.dataset.data.reduce(function(a,b){return a+b;},0);var pct=Math.round(v/sum*100);return pct<5?'':pct+'%';},
         display:function(ctx){var sum=ctx.dataset.data.reduce(function(a,b){return a+b;},0);return ctx.dataset.data[ctx.dataIndex]/sum>=0.05;}
       }
     }}});
 
   /* CHART 5: Cumulative */
-  var cum=0,cumData=plan.map(function(r){cum+=r.W*p.wC+r.H*p.hC+r.L*p.lC+r.P*p.pC+r.I*p.iC+r.S*p.sC+r.C*p.cC+r.O*p.oC;return Math.round(cum);});
+  var cum=0,cumData=plan.map(function(r){cum+=r.W*p.wC+r.H*p.hC+r.L*p.lC+r.P*p.pCe+r.I*p.iC+r.S*p.sC+r.C*p.cC+r.O*p.oC;return Math.round(cum);});
   mkChart('ch_cum',{type:'line',data:{labels:labels,datasets:[{
     label:'누적비용',data:cumData,borderColor:'#111318',backgroundColor:'rgba(17,19,24,.06)',
     borderWidth:2.5,fill:true,tension:.4,pointRadius:5,pointBackgroundColor:'#fff',pointBorderColor:'#111318',pointBorderWidth:2,datalabels:{anchor:'end',align:function(ctx){return ctx.dataIndex===0?'right':'top';},offset:4,
-      font:{family:"'IBM Plex Mono'",size:10,weight:'700'},
+      font:{family:"'Barlow Condensed','IBM Plex Sans KR',sans-serif",size:10,weight:'700'},
       color:'#4a5263',
       formatter:function(v){if(v===null||Math.abs(v)<0.05)return '';if(Math.abs(v)>=1000)return Math.round(Math.abs(v)/1000*10)/10+'k';return Math.round(Math.abs(v)*10)/10;},
       display:function(ctx){return ctx.dataset.data[ctx.dataIndex]!==null&&Math.abs(ctx.dataset.data[ctx.dataIndex])>0.05;}
@@ -876,19 +1223,19 @@ function render(plan,cost,p,_res){
   /* CHART 6: Workforce */
   var wfDatasets=[
     {label:'종업원(W)',data:plan.map(function(r){return r.W;}),type:'line',borderColor:'#111318',borderWidth:2.5,pointRadius:5,pointBackgroundColor:'#fff',pointBorderColor:'#111318',pointBorderWidth:2,fill:false,tension:.3,order:1,datalabels:{anchor:'end',align:function(ctx){return ctx.dataIndex===0?'right':'top';},offset:4,
-      font:{family:"'IBM Plex Mono'",size:10,weight:'700'},
+      font:{family:"'Barlow Condensed','IBM Plex Sans KR',sans-serif",size:10,weight:'700'},
       color:'#4a5263',
       formatter:function(v){if(v===null||Math.abs(v)<0.05)return '';if(Math.abs(v)>=1000)return Math.round(Math.abs(v)/1000*10)/10+'k';return Math.round(Math.abs(v)*10)/10;},
       display:function(ctx){return ctx.dataset.data[ctx.dataIndex]!==null&&Math.abs(ctx.dataset.data[ctx.dataIndex])>0.05;}
     }},
     {label:'고용(H)',data:plan.map(function(r){return r.H;}),backgroundColor:'rgba(26,127,75,.65)',borderColor:'#1a7f4b',borderWidth:2,order:2,datalabels:{anchor:'end',align:'end',
-      font:{family:"'IBM Plex Mono'",size:10,weight:'700'},
+      font:{family:"'Barlow Condensed','IBM Plex Sans KR',sans-serif",size:10,weight:'700'},
       color:'#4a5263',
       formatter:function(v){if(Math.abs(v)<0.05)return '';if(Math.abs(v)>=1000)return Math.round(Math.abs(v)/1000*10)/10+'k';return Math.round(Math.abs(v)*10)/10;},
       display:function(ctx){return Math.abs(ctx.dataset.data[ctx.dataIndex])>0.05;}
     }},
     {label:'해고(L)',data:plan.map(function(r){return -r.L;}),backgroundColor:'rgba(217,119,6,.65)',borderColor:'#d97706',borderWidth:2,order:2,datalabels:{anchor:'end',align:'end',
-      font:{family:"'IBM Plex Mono'",size:10,weight:'700'},
+      font:{family:"'Barlow Condensed','IBM Plex Sans KR',sans-serif",size:10,weight:'700'},
       color:'#4a5263',
       formatter:function(v){if(Math.abs(v)<0.05)return '';if(Math.abs(v)>=1000)return Math.round(Math.abs(v)/1000*10)/10+'k';return Math.round(Math.abs(v)*10)/10;},
       display:function(ctx){return Math.abs(ctx.dataset.data[ctx.dataIndex])>0.05;}
@@ -897,7 +1244,7 @@ function render(plan,cost,p,_res){
   if(snapshot&&snapPlan){
     wfDatasets.push({label:'[저장] 종업원',data:snapPlan.map(function(r){return r.W;}),type:'line',borderColor:'#111318',borderWidth:2,borderDash:[6,4],pointRadius:4,pointBackgroundColor:'#fff',pointBorderColor:'#111318',pointBorderWidth:2,fill:false,tension:.3,order:1,datalabels:{display:false}});
   }
-  mkChart('ch_wf',{type:'bar',data:{labels:labels,datasets:wfDatasets},options:{responsive:true,maintainAspectRatio:false,animation:{duration:500},plugins:{legend:{display:false},tooltip:baseTip},scales:{x:{grace:'15%',grid:{color:'rgba(0,0,0,.06)',lineWidth:.8},ticks:{color:'#4a5263',font:{family:"'IBM Plex Mono'",size:11,weight:'600'}},border:{color:'#c8cdd6'}},y:{grace:'15%',grid:{color:'rgba(0,0,0,.06)',lineWidth:.8},ticks:{color:'#4a5263',font:{family:"'IBM Plex Mono'",size:11,weight:'600'}},border:{color:'#c8cdd6'}}}}});
+  mkChart('ch_wf',{type:'bar',data:{labels:labels,datasets:wfDatasets},options:{responsive:true,maintainAspectRatio:false,animation:{duration:500},plugins:{legend:{display:false},tooltip:baseTip},scales:{x:{grace:'15%',grid:{color:'rgba(0,0,0,.06)',lineWidth:.8},ticks:{color:'#4a5263',font:{family:"'Barlow Condensed','IBM Plex Sans KR',sans-serif",size:11,weight:'600'}},border:{color:'#c8cdd6'}},y:{grace:'15%',grid:{color:'rgba(0,0,0,.06)',lineWidth:.8},ticks:{color:'#4a5263',font:{family:"'Barlow Condensed','IBM Plex Sans KR',sans-serif",size:11,weight:'600'}},border:{color:'#c8cdd6'}}}}});
 
   /* store for snapshot */
   window._lastPlan=plan;window._lastResult=res_dummy;window._lastP=p;
@@ -908,7 +1255,7 @@ function render(plan,cost,p,_res){
   mkChart('ch_ot',{type:'bar',data:{labels:labels,datasets:[{
     label:'잔업(O)',data:plan.map(function(r){return r.O;}),
     backgroundColor:'rgba(26,86,219,.65)',borderColor:'#1a56db',borderWidth:2,datalabels:{anchor:'end',align:'end',
-      font:{family:"'IBM Plex Mono'",size:10,weight:'700'},
+      font:{family:"'Barlow Condensed','IBM Plex Sans KR',sans-serif",size:10,weight:'700'},
       color:'#4a5263',
       formatter:function(v){if(Math.abs(v)<0.05)return '';if(Math.abs(v)>=1000)return Math.round(Math.abs(v)/1000*10)/10+'k';return Math.round(Math.abs(v)*10)/10;},
       display:function(ctx){return Math.abs(ctx.dataset.data[ctx.dataIndex])>0.05;}
@@ -916,15 +1263,158 @@ function render(plan,cost,p,_res){
   }]},options:bOpts()});
 }
 
+/* ── 품질 연계 분석: 공정능력(Ppk)이 생산계획 비용에 주는 영향 ──
+   같은 수요·비용 조건에서 불량률만 바꿔 계획을 다시 최적화한다.
+   불량이 늘면 양품을 맞추려고 더 많이 만들어야 하므로 인력·재료·외주·폐기비가 늘어난다. */
+function analyzeQuality(Darr,p0,useInt){
+  var q=p0.q,ratio=(q.mode==='cap'&&q.Ppk>0)?q.Pp/q.Ppk:1;   // 산포만 줄이고 중심 치우침 비율은 유지
+  function solveAt(def){var p=applyQuality(Object.assign({},p0),1-Math.max(def,1e-9),q.avail,q.scrap);   // 모든 시나리오를 같은 모형(인원만 정수)으로 풀어 비교가 일관되게
+    var r=buildAndSolve(Darr,p,useInt,{noStrat:true});if(!r)return null;
+    var pl=planFromX(r.x,Darr),Wm=0,C=0,P=0;pl.forEach(function(x){Wm=Math.max(Wm,x.W);C+=x.C;P+=x.P;});
+    return{cost:r.cost,def:def,Wmax:Wm,C:C,P:P,defUnits:P*def};}
+  var zero=solveAt(0),cur=solveAt(q.def),tgt=null;
+  if(q.mode==='cap'&&q.target>0&&q.Ppk<q.target){var tPp=q.target*ratio;tgt=solveAt(defectFromCap(tPp,q.target));tgt.Ppk=q.target;tgt.Pp=tPp;}
+  var grid=[0.5,0.6,0.67,0.8,0.9,1.0,1.1,1.2,1.33,1.5,1.67].map(function(k){var r=solveAt(defectFromCap(k*ratio,k));if(r){r.Ppk=k;r.Pp=k*ratio;}return r;}).filter(Boolean);
+  return{q:q,ratio:ratio,zero:zero,cur:cur,tgt:tgt,grid:grid,months:Darr.length};
+}
+function renderQuality(Q){
+  var box=document.getElementById('qtab');if(!Q||!Q.zero||!Q.cur){box.innerHTML='<div class="ph">분석할 수 없습니다.</div>';return;}
+  var q=Q.q,z=Q.zero,c=Q.cur,t=Q.tgt,loss=c.cost-z.cost,lossPct=loss/z.cost*100;
+  function defTxt(d){return d<0.01?Math.round(d*1e6).toLocaleString('ko-KR')+' ppm':(d*100).toFixed(2)+'%';}
+  function card(l,v,sub){return '<div class="ss-kv"><div class="ss-k">'+l+'</div><div class="ss-v">'+v+'</div>'+(sub?'<div class="ss-k">'+sub+'</div>':'')+'</div>';}
+  var ins=[];
+  ins.push('<b>현재 품질</b>: '+(q.mode==='cap'?'Pp '+q.Pp.toFixed(2)+' · Ppk '+q.Ppk.toFixed(2)+' → ':'')+'예상 불량률 '+defTxt(c.def)+'. 이를 반영하면 '+Q.months+'개월 계획 비용이 불량 0 대비 <b>+'+fc(loss)+'천원 (+'+lossPct.toFixed(2)+'%)</b>, 예상 불량 '+fc(c.defUnits)+'개 — 불량품을 만드는 데 든 인력·재료와 폐기비입니다.');
+  if(t){var save=c.cost-t.cost,sig=(1-q.Ppk/q.target)*100;
+    ins.push('<b>개선 효과</b>: 산포를 '+sig.toFixed(0)+'% 줄여 Ppk를 '+q.target.toFixed(2)+'로 올리면 불량률 '+defTxt(t.def)+', 계획 비용 <b>−'+fc(save)+'천원</b>. 이 금액이 '+Q.months+'개월 기준 공정 개선(설비·교육 등)에 쓸 수 있는 <b>투자 한도</b>입니다 <span class="ins-sub">(생산계획 비용만 따진 하한값 — 반품·클레임 등 외부 실패비용과 고객 신뢰는 제외되어 실제 개선 가치는 이보다 큼)</span>.');}
+  else if(q.mode==='cap')ins.push('<b>개선 효과</b>: 현재 Ppk가 이미 목표('+q.target.toFixed(2)+') 이상입니다.');
+  // 관리 기준선: 품질 손실이 계획 비용의 1%를 넘는 Ppk
+  var g=Q.grid,th=null;
+  for(var i=0;i<g.length-1;i++){var a=(g[i].cost-z.cost)/z.cost*100,b=(g[i+1].cost-z.cost)/z.cost*100;
+    if(a>=1&&b<1){th=g[i].Ppk+(g[i+1].Ppk-g[i].Ppk)*(a-1)/(a-b);break;}}
+  if(th)ins.push('<b>관리 기준선</b>: Ppk가 약 <b>'+th.toFixed(2)+'</b> 아래로 떨어지면 품질 손실이 계획 비용의 1%를 넘습니다. SPC 대시보드에서 Ppk를 모니터링할 때 경보 기준으로 쓸 수 있습니다.');
+  var low=g[0];
+  if(low)ins.push('<b>계획에 미치는 경로</b>: Ppk '+low.Ppk.toFixed(2)+'(불량 '+defTxt(low.def)+')이면 양품을 맞추려고 생산량이 '+fc(low.P-z.P)+'개 늘고, 최대 인원 '+fn(z.Wmax)+' → '+fn(low.Wmax)+'명, 외주 '+fc(z.C)+' → '+fc(low.C)+'개, 계획 비용 +'+((low.cost-z.cost)/z.cost*100).toFixed(1)+'%.');
+  ins.push(lossPct<0.5?'<b>우선순위</b>: 현재 품질 수준에서는 품질 손실이 계획 비용의 '+lossPct.toFixed(2)+'%로 작아, 비용을 줄이려면 품질보다 인력·재고 계획이 우선입니다. 다만 Ppk가 기준선 아래로 내려가지 않도록 관리는 필요합니다.'
+    :'<b>우선순위</b>: 품질 손실이 계획 비용의 '+lossPct.toFixed(1)+'%로 무시하기 어려운 수준입니다. 공정 개선이 생산계획 비용 절감의 주요 수단입니다.');
+  var rows=g.map(function(r){var isCur=q.mode==='cap'&&Math.abs(r.Ppk-q.Ppk)<0.005;return '<tr><td>'+r.Ppk.toFixed(2)+'</td><td>'+r.Pp.toFixed(2)+'</td><td>'+defTxt(r.def)+'</td><td>'+fc(r.cost)+'</td><td class="'+(r.cost-z.cost>0.01*z.cost?'rd':'')+'">+'+fc(r.cost-z.cost)+' ('+((r.cost-z.cost)/z.cost*100).toFixed(2)+'%)</td><td>'+fc(r.defUnits)+'</td><td>'+fn(r.Wmax)+'</td><td>'+fc(r.C)+'</td></tr>';}).join('');
+  box.innerHTML=
+    '<div class="rsec"><div class="rhd"><span class="rtitle">품질 → 생산계획 연계</span><span class="rbadge">공정능력별로 계획을 다시 최적화</span></div>'+
+    '<div class="ss-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:12px">'+
+      card('현재 공정능력',q.mode==='cap'?'Ppk '+q.Ppk.toFixed(2):'직접 입력',q.mode==='cap'?'Pp '+q.Pp.toFixed(2):'')+
+      card('예상 불량률',defTxt(c.def),'양품률 '+((1-c.def)*100).toFixed(c.def<0.001?3:2)+'%')+
+      card('품질 손실 비용 ('+Q.months+'개월)','+'+fc(loss),'계획 비용의 '+lossPct.toFixed(2)+'%')+
+      card(t?'목표 Ppk '+q.target.toFixed(2)+' 달성 시':'목표 대비',t?'−'+fc(c.cost-t.cost):'달성','= 개선 투자 한도')+
+    '</div>'+
+    '<div class="insight"><ul><li>'+ins.join('</li><li>')+'</li></ul></div></div>'+
+    '<div class="ccard" style="margin-bottom:1rem"><div class="chead"><span class="ctitle">공정능력(Ppk)별 생산계획 비용 증가 (불량 0 대비, %)</span></div><div class="cbody"><div style="position:relative;height:240px"><canvas id="ch_q"></canvas></div></div></div>'+
+    '<div class="rsec"><div class="rhd"><span class="rtitle">공정능력 수준별 계획</span><span class="rbadge">Pp/Ppk 비율(중심 치우침) 고정, 산포만 변경</span></div>'+
+    '<div class="twrap"><table><thead><tr><th>Ppk</th><th>Pp</th><th>불량률</th><th>계획 비용</th><th>불량 0 대비</th><th>예상 불량 (개)</th><th>최대 인원</th><th>외주 합계</th></tr></thead><tbody>'+rows+'</tbody></table></div>'+
+    '<div class="sim-note">불량률 = Φ(−3·Ppk) + Φ(−(6·Pp−3·Ppk)), 정규분포 가정(SPC 대시보드의 예상 불량률과 같은 방식). 모델에서는 생산량 × 양품률만 재고로 들어가고, 생산 1개당 비용에 불량률 × 폐기비를 더합니다. 설비 가용률은 정규·잔업 생산능력에 곱해집니다. '+
+    '불량은 폐기한다고 가정했으며(재작업 없음), 불량률은 기간 내내 일정하다고 봅니다.</div></div>';
+  var pts=function(f){return g.map(function(r){return{x:r.Ppk,y:f(r)};});};
+  var marks=[];if(q.mode==='cap')marks.push({label:'현재',data:[{x:q.Ppk,y:lossPct}],showLine:false,pointRadius:8,pointStyle:'rectRot',backgroundColor:'#c0392b',borderColor:'#c0392b',datalabels:{display:false}});
+  if(t)marks.push({label:'목표',data:[{x:q.target,y:(t.cost-z.cost)/z.cost*100}],showLine:false,pointRadius:8,pointStyle:'triangle',backgroundColor:'#1a7f4b',borderColor:'#1a7f4b',datalabels:{display:false}});
+  mkChart('ch_q',{type:'line',data:{datasets:[
+    {label:'계획 비용 증가 (%)',data:pts(function(r){return +((r.cost-z.cost)/z.cost*100).toFixed(3);}),borderColor:'#111318',borderWidth:2.5,pointRadius:4,pointBackgroundColor:'#fff',fill:false,datalabels:{display:false}},
+    {label:'1% 기준선',data:[{x:0.5,y:1},{x:1.67,y:1}],borderColor:'#d97706',borderDash:[6,4],borderWidth:1.5,pointRadius:0,fill:false,datalabels:{display:false}}
+  ].concat(marks)},options:bOpts({animation:false,plugins:{legend:{display:true,labels:{boxWidth:10,font:{size:11}}},tooltip:baseTip},
+    scales:{x:{type:'linear',min:0.5,max:1.7,title:{display:true,text:'Ppk (공정능력)',font:{size:10}},ticks:{font:{size:10}}},y:{min:0,title:{display:true,text:'불량 0 대비 비용 증가 (%)',font:{size:10}},ticks:{font:{size:10}}}}})});
+}
+
+/* ── 결과 해석 (자동 요약) ── */
+function buildInsights(plan,p,res,totD,late){
+  var TH=plan.length,li=[];
+  // 1) 인력 운용
+  var changes=[];plan.forEach(function(r){if(r.H>0.5)changes.push(r.t+'월 '+fn(r.H)+'명 고용');if(r.L>0.5)changes.push(r.t+'월 '+fn(r.L)+'명 해고');});
+  var Ws=plan.map(function(r){return r.W;}),wMin=Math.min.apply(null,Ws),wMax=Math.max.apply(null,Ws);
+  var nChg=plan.filter(function(r){return r.H>0.5||r.L>0.5;}).length;
+  li.push('<b>인력</b>: 초기 '+fn(p.W0)+'명 → '+(changes.length?changes.join(', '):'변동 없음')+'. 기간 중 '+(wMin===wMax?fn(wMin)+'명 유지':fn(wMin)+'~'+fn(wMax)+'명')+
+    ' <span class="ins-sub">('+(nChg<=2?'인원을 거의 고정하는 평준화(level)형':'수요를 따라 인원을 바꾸는 추종(chase)형에 가까움')+')</span>');
+  // 2) 재고로 수요 변동 흡수
+  var build=[],draw=[];
+  plan.forEach(function(r){var sup=r.P+r.C;if(sup>r.D+0.5)build.push(r.t+'월');else if(sup<r.D-0.5)draw.push(r.t+'월');});
+  var Ps=plan.map(function(r){return r.P;});
+  var pMin=Math.min.apply(null,Ps),pMax=Math.max.apply(null,Ps);
+  var txt='<b>생산·재고</b>: 월 생산량 '+(Math.abs(pMax-pMin)<0.5?fn(pMin)+'개로 일정':fn(pMin)+'~'+fn(pMax)+'개');
+  if(build.length)txt+=', 수요보다 많이 만든 달('+build.join('·')+')에 재고를 쌓고';
+  if(draw.length)txt+=', 수요가 생산을 넘는 달('+draw.join('·')+')은 재고로 메움';
+  li.push(txt);
+  // 3) 피크 대응 수단
+  var peak=[],clearAt=null;plan.forEach(function(r,i){var parts=[];var newS=r.S-(i>0?plan[i-1].S:0);
+    if(newS>0.5&&clearAt===null){for(var k=i+1;k<TH;k++)if(plan[k].S<0.5){clearAt=plan[k].t;break;}}
+    if(newS>0.5)parts.push('부재고 '+fn(newS)+'개');if(r.C>0.5)parts.push('외주 '+fn(r.C)+'개');if(r.O>0.05)parts.push('잔업 '+fn(r.O)+'시간');
+    if(parts.length)peak.push(r.t+'월('+parts.join(', ')+')');});
+  if(peak.length)li.push('<b>정규 생산 외 수단</b>: '+peak.join(' / ')+(late>0.5?' — 지연된 '+fc(late)+'개는 전체 수요의 '+(late/totD*100).toFixed(1)+'%'+(clearAt?'이며 '+clearAt+'월까지 모두 해소':''):''));
+  // 4) 단가 비교 (왜 이런 선택을 했는지)
+  var reg=(p.wC/(p.prodPW*p.a)+p.pCe)/p.y,ot=(p.oC/(p.otFac*p.a)+p.pCe)/p.y,sub=p.cC;
+  var opts=[['정규 생산',reg],['외주',sub],['잔업 생산',ot]].sort(function(a,b){return a[1]-b[1];});
+  li.push('<b>단가 비교</b>(천원/개): '+opts.map(function(o){return o[0]+' '+fn(Math.round(o[1]*10)/10);}).join(' < ')+
+    ' · 1개월 보관 '+fn(p.iC)+' · 1개월 지연(부재고) '+fn(p.sC)+' · 1명 고용/해고 '+fn(p.hC)+'/'+fn(p.lC)+
+    ' <span class="ins-sub">— 비싼 수단(잔업·외주)보다 미리 만들어 보관하거나 짧게 지연시키는 쪽이 싸면 그쪽을 택함</span>');
+  // 5) 비용 구조
+  var cat={'노동비':0,'재료·폐기비':0,'외주비':0,'재고비':0,'부재고비':0,'고용·해고비':0,'잔업비':0},tot=0;
+  plan.forEach(function(r){cat['노동비']+=r.W*p.wC;cat['재료·폐기비']+=r.P*p.pCe;cat['외주비']+=r.C*p.cC;cat['재고비']+=r.I*p.iC;cat['부재고비']+=r.S*p.sC;cat['고용·해고비']+=r.H*p.hC+r.L*p.lC;cat['잔업비']+=r.O*p.oC;});
+  Object.keys(cat).forEach(function(k){tot+=cat[k];});
+  var top=Object.keys(cat).sort(function(a,b){return cat[b]-cat[a];}).filter(function(k){return cat[k]>0;}).slice(0,2);
+  var lever={'노동비':'인력 수준(W)을','재료·폐기비':'생산량을','외주비':'외주 의존도를','재고비':'재고 수준을','부재고비':'지연 수량을','고용·해고비':'인력 변동을','잔업비':'잔업 사용을'};
+  if(tot>0)li.push('<b>비용 구조</b>: '+top.map(function(k){return k+' '+(cat[k]/tot*100).toFixed(0)+'%';}).join(', ')+' — 비중이 가장 큰 '+top[0]+'의 동인인 '+lever[top[0]]+' 어떻게 정하느냐가 총비용을 좌우함');
+  // 품질 반영 시
+  if(p.y<1-1e-12||p.a<1-1e-12){var dU=0;plan.forEach(function(r){dU+=r.P*(1-p.y);});
+    li.push('<b>품질·설비 반영</b>: 양품률 '+(p.y*100).toFixed(p.y>0.999?3:2)+'%, 설비 가용률 '+(p.a*100).toFixed(0)+'% — 예상 불량 '+fc(dU)+'개를 감안해 생산량을 늘린 계획입니다. 영향 분석은 \'품질 연계\' 탭 참고.');}
+  // 6) 정수해 vs LP
+  if(res.integer){
+    var diff=res.cost-res.lpCost,lpW=res.lpX.slice(0,TH),frac=[];
+    lpW.forEach(function(v){var s1=v.toFixed(1);if(Math.abs(v-Math.round(v))>1e-6&&frac.indexOf(s1)<0)frac.push(s1);});
+    if(diff<0.5)li.push('<b>정수 조건</b>: LP 완화해가 이미 정수라 비용 차이 없음 ('+fc(res.cost)+')');
+    else li.push('<b>정수 조건</b>: LP 완화해 '+fc(res.lpCost)+' → 정수해 '+fc(res.cost)+' (+'+fc(diff)+', +'+(res.lpCost>0?(diff/res.lpCost*100).toFixed(2):'0')+'%)'+
+      (frac.length?'. LP 해는 인원이 '+frac.slice(0,2).map(function(v){return v+'명';}).join(', ')+'처럼 소수라 그대로 실행할 수 없으므로 정수해로 계획':'')+
+      (res.proven?'':' <span class="ins-sub">(계산 시간 제한으로 최적성 미보장)</span>'));
+  } else {
+    li.push('<b>LP 완화해</b>: 인원·수량에 소수점이 나올 수 있습니다. 실제 계획에는 \'정수해\' 옵션을 켜서 사용하세요.');
+  }
+  var html='<ul><li>'+li.join('</li><li>')+'</li></ul>';
+  // 전략 비교표
+  var st=res.strategies;
+  if(st&&st.opt){
+    function row(name,desc,x){
+      if(!x)return '<tr><td><b>'+name+'</b></td><td colspan="4" class="ins-sub">이 조건에서는 실행 불가 (예: 초기재고가 1월 수요보다 많아 재고 0 유지 불가)</td><td>'+desc+'</td></tr>';
+      var d=x.cost-st.opt.cost;
+      return '<tr><td><b>'+name+'</b></td><td>'+fc(x.cost)+'</td><td class="'+(d>0.5?'rd':'')+'">'+(d>0.5?'+'+fc(d)+' (+'+(d/st.opt.cost*100).toFixed(1)+'%)':'—')+'</td>'+
+        '<td>'+(Math.abs(x.wMax-x.wMin)<0.5?fn(x.wMin):fn(x.wMin)+'~'+fn(x.wMax))+'명</td><td>고용 '+fn(x.hire)+' · 해고 '+fn(x.fire)+'</td><td>'+desc+'</td></tr>';}
+    html+='<div class="ins-sub" style="margin:12px 0 6px;font-weight:700;color:var(--gray5)">전략 비교 — 같은 조건에서 대표 전략으로 고정했을 때의 총비용 (천원)</div>'+
+      '<div class="twrap"><table><thead><tr><th>전략</th><th>총비용</th><th>최적 대비</th><th>인원</th><th>인력 변동</th><th>방식</th></tr></thead><tbody>'+
+      row('최적 계획','모든 수단을 비용 기준으로 조합',st.opt)+
+      row('평준화(Level)','인원 고정, 재고·부재고·외주로 수요 흡수',st.level)+
+      row('추종(Chase)','재고 없이 매달 인원을 수요에 맞춤',st.chase)+
+      '</tbody></table></div>';
+    var alts=[st.level,st.chase].filter(Boolean);
+    if(alts.length){var worst=alts.reduce(function(a,b){return a.cost>b.cost?a:b;}),bestAlt=alts.reduce(function(a,b){return a.cost<b.cost?a:b;});
+      var gBest=bestAlt.cost-st.opt.cost,gWorst=worst.cost-st.opt.cost,nameOf=function(x){return x===st.level?'평준화':'추종';};
+      html+='<div class="ins-sub" style="margin-top:6px">→ '+(gBest<0.5?'이 조건에서는 '+nameOf(bestAlt)+' 전략이 사실상 최적 계획과 같은 비용이고, ':'최적 계획은 단순 전략 중 가장 나은 '+nameOf(bestAlt)+'보다 '+fc(gBest)+'천원, ')+
+        (worst!==bestAlt?nameOf(worst)+' 전략보다 '+fc(gWorst)+'천원 저렴('+nameOf(worst)+' 대비 '+(gWorst/worst.cost*100).toFixed(1)+'% 절감)':'')+'</div>';}
+  }
+  return html;
+}
+
+function planFromX(x,Darr){
+  var TH=Darr.length,plan=[];
+  for(var t=1;t<=TH;t++){
+    var iW=t-1,iH=TH+t-1,iL=2*TH+t-1,iP=3*TH+t-1,iI=4*TH+t-1,iS=5*TH+t-1,iC=6*TH+t-1,iO=7*TH+t-1;
+    plan.push({t:t,D:Darr[t-1],W:Math.max(0,x[iW]),H:Math.max(0,x[iH]),L:Math.max(0,x[iL]),
+      P:Math.max(0,x[iP]),I:Math.max(0,x[iI]),S:Math.max(0,x[iS]),C:Math.max(0,x[iC]),O:Math.max(0,x[iO])});
+  }
+  return plan;
+}
+
 /* ── RUN ── */
-function runSolve(){
+function runSolve(goToResult){
   var btn=document.getElementById('runBtn');
   btn.textContent='계산 중...';btn.disabled=true;
   document.getElementById('hStatus').textContent='RUNNING';
   document.getElementById('hStatus').className='hdr-stat-val warn';
   var t0=Date.now();
   setTimeout(function(){
-    var p=getP(),Darr=D.slice(),res=buildAndSolve(Darr,p);
+    var p=getP(),Darr=D.slice(),useInt=document.getElementById('pint').checked,res=buildAndSolve(Darr,p,useInt);
     var dt=((Date.now()-t0)/1000).toFixed(3)+'s';
     document.getElementById('hTime').textContent=dt;
     if(!res){
@@ -932,16 +1422,245 @@ function runSolve(){
       document.getElementById('hStatus').className='hdr-stat-val err';
       btn.textContent='최적화 실행';btn.disabled=false;return;
     }
-    var x=res.x,TH=Darr.length,plan=[];
-    for(var t=1;t<=TH;t++){
-      var iW=t-1,iH=TH+t-1,iL=2*TH+t-1,iP=3*TH+t-1,iI=4*TH+t-1,iS=5*TH+t-1,iC=6*TH+t-1,iO=7*TH+t-1;
-      plan.push({t:t,D:Darr[t-1],W:Math.max(0,x[iW]),H:Math.max(0,x[iH]),L:Math.max(0,x[iL]),
-        P:Math.max(0,x[iP]),I:Math.max(0,x[iI]),S:Math.max(0,x[iS]),C:Math.max(0,x[iC]),O:Math.max(0,x[iO])});
-    }
+    var plan=planFromX(res.x,Darr);
     render(plan,res.cost,p,res);
+    try{window._qa=analyzeQuality(Darr,p,useInt);renderQuality(window._qa);}catch(e){console.error(e);}
+    window._inputsDirty=false;document.getElementById('inDirty').style.display='none';
+    var st=res.strategies||{};
+    window._sim={p:p,D:Darr.slice(),integer:res.integer,plans:{
+      opt:{plan:plan,cost:res.cost},
+      level:st.level?{plan:planFromX(st.level.x,Darr),cost:st.level.cost}:null,
+      chase:st.chase?{plan:planFromX(st.chase.x,Darr),cost:st.chase.cost}:null}};
+    if(currentPage===2)runSimulation();
+    else document.getElementById('simStale').style.display=window._simDone?'':'none';
     btn.textContent='다시 실행';btn.disabled=false;
+    if(goToResult===true||currentPage===0)showPage(currentPage===2?2:1);else updateCtx();
   },60);
 }
+
+/* ── 페이지 전환 ── */
+var currentPage=0;
+function showPage(i){
+  currentPage=i;
+  [0,1,2].forEach(function(k){document.getElementById('pg'+k).classList.toggle('active',k===i);});
+  document.getElementById('inputPage').style.display=i===0?'':'none';
+  document.getElementById('optMain').style.display=i===1?'':'none';
+  document.getElementById('simMain').style.display=i===2?'':'none';
+  document.getElementById('snapPanel').style.visibility=i===1?'':'hidden';
+  document.getElementById('snapBtn').style.display=i===1?'':'none';
+  updateCtx();
+  if(i===1)Object.keys(charts).forEach(function(k){try{charts[k].resize();}catch(e){}});
+  window.scrollTo(0,0);
+}
+// 02·03 상단: 지금 결과가 어떤 입력으로 계산됐는지 요약
+function updateCtx(){
+  var S0=window._sim,html;
+  if(!S0)html='아직 계산 전입니다. <a href="#" onclick="showPage(0);return false">01 입력 데이터</a>에서 최적화를 실행하세요.';
+  else{var p=S0.p,tot=S0.D.reduce(function(a,b){return a+b;},0),q=p.q;
+    html='<span class="ctx-k">수요</span> '+S0.D.length+'개월 · 총 '+tot.toLocaleString('ko-KR')+'개'+
+      '<span class="ctx-k">인원</span> 초기 '+p.W0+'명'+
+      '<span class="ctx-k">재고</span> 초기 '+p.I0.toLocaleString('ko-KR')+' → 목표 '+p.IT.toLocaleString('ko-KR')+
+      '<span class="ctx-k">품질</span> '+(q.on?'반영 (양품률 '+(p.y*100).toFixed(2)+'%, 가용률 '+Math.round(p.a*100)+'%)':'미반영')+
+      '<span class="ctx-k">해법</span> '+(S0.integer?'정수해':'LP')+
+      ' <a href="#" class="ctx-edit" onclick="showPage(0);return false">입력 수정</a>';}
+  if(window._inputsDirty&&S0)html+=' <span class="ctx-dirty">입력이 바뀌었습니다 — 다시 실행 필요</span>';
+  ['ctx1','ctx2'].forEach(function(id){var e=document.getElementById(id);if(e)e.innerHTML=html;});
+}
+
+/* ── 수요 변동 시뮬레이션: 안전재고 수준 결정 ──
+   질문: 수요가 예측과 다를 수 있을 때, 재고 여유(안전재고)를 얼마나 두는 계획이 기대 총비용이 가장 낮은가?
+   1) 안전재고 0~50%(다음 달 수요 대비)로 바꿔가며 02 계획 최적화 모델을 다시 풀어 계획을 만든다.
+   2) 각 계획의 인원·생산·외주·잔업 계획은 고정하고, 실제 수요 = 예측 × (1+ε), ε ~ N(0, 변동성²)로 무작위 생성.
+      모든 계획을 '같은 수요 시나리오'로 평가한다(공통 난수).
+   3) 계획보다 부족해지면 남은 잔업 한도 안에서 추가 생산(옵션), 그래도 모자라면 부재고.
+   4) 기간 말 정산: 남은 부재고와 최종재고 목표 부족분은 긴급 외주 단가로 채우고,
+      목표를 넘는 재고는 다음 기간 생산을 줄여주므로 정규 생산 단가만큼 비용에서 뺀다. */
+var SS_LEVELS=[0,0.05,0.10,0.15,0.20,0.25,0.30,0.35,0.40,0.45,0.50];
+var simSeed=1,ssCache={},simView=null,simResult=null;
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;var t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+function gauss(rnd){var u=0,v=0;while(u===0)u=rnd();while(v===0)v=rnd();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);}
+function regUnitCost(p){return (p.wC/(p.prodPW*p.a)+p.pCe)/p.y;}   // 양품 1개당 정규 생산 단가
+function simulatePlan(plan,p,Dact,useOT){
+  var I=p.I0,S=0,cost=0,late=0,totD=0,net=[];
+  for(var k=0;k<plan.length;k++){
+    var r=plan[k];
+    cost+=r.W*p.wC+r.H*p.hC+r.L*p.lC+r.P*p.pCe+r.C*p.cC+r.O*p.oC;
+    var pos=I-S+r.P*p.y+r.C-Dact[k];
+    totD+=Dact[k];
+    if(useOT&&pos<-r.S-1e-9){   // 계획에서 허용한 부재고보다 더 부족하면 남은 잔업으로 보충
+      var capUnits=Math.max(0,(p.otMax*r.W-r.O)*p.otFac*p.a),extra=Math.min((-r.S-pos)/p.y,capUnits);
+      pos+=extra*p.y;cost+=extra/(p.otFac*p.a)*p.oC+extra*p.pCe;
+    }
+    I=Math.max(0,pos);var newS=Math.max(0,-pos);
+    late+=Math.max(0,newS-S);S=newS;
+    cost+=I*p.iC+S*p.sC;net.push(pos);
+  }
+  var endShort=I<p.IT-0.5;
+  // 기간 말 정산
+  var settle=S*p.cC+Math.max(0,p.IT-I)*p.cC-Math.max(0,I-p.IT)*regUnitCost(p);
+  return{cost:cost+settle,fill:totD>0?1-late/totD:1,anyLate:late>0.5,endShort:endShort,net:net};
+}
+function pct(arr,q){var a=arr.slice().sort(function(x,y){return x-y;});var i=(a.length-1)*q,lo=Math.floor(i),hi=Math.ceil(i);return a[lo]+(a[hi]-a[lo])*(i-lo);}
+function mean(a){return a.reduce(function(x,y){return x+y;},0)/a.length;}
+function getPlanSS(S0,ss){
+  var key=JSON.stringify([S0.p,S0.D,S0.integer])+'|'+ss.toFixed(2);
+  if(ssCache[key]!==undefined)return ssCache[key];
+  var r=buildAndSolve(S0.D,S0.p,S0.integer,{ss:ss,noStrat:true});
+  ssCache[key]=r?{ss:ss,plan:planFromX(r.x,S0.D),cost:r.cost}:null;
+  return ssCache[key];
+}
+function getSSPlans(S0){
+  var key=JSON.stringify([S0.p,S0.D,S0.integer]);
+  if(ssCache[key])return ssCache[key];
+  var plans=SS_LEVELS.map(function(ss){return getPlanSS(S0,ss);});
+  ssCache[key]=plans;return plans;
+}
+function makeScenarios(D,cv,N,seed){
+  var rnd=mulberry32(seed*7919+Math.round(cv*1000)),sc=[];
+  for(var n=0;n<N;n++)sc.push(D.map(function(d){return Math.max(0,d*(1+cv*gauss(rnd)));}));
+  return sc;
+}
+function evalOne(pl,S0,scen,useOT,keepDetail){
+  if(!pl)return null;var a={cost:[],fill:[],late:[],short:[],net:[]};
+  scen.forEach(function(Dact){var r=simulatePlan(pl.plan,S0.p,Dact,useOT);
+    a.cost.push(r.cost);a.fill.push(r.fill);a.late.push(r.anyLate?1:0);a.short.push(r.endShort?1:0);if(keepDetail)a.net.push(r.net);});
+  return{ss:pl.ss,plan:pl.cost,exp:mean(a.cost),p10:pct(a.cost,.1),p90:pct(a.cost,.9),fill:mean(a.fill)*100,late:mean(a.late)*100,short:mean(a.short)*100,net:a.net,costs:a.cost};
+}
+function evalLevels(plans,S0,scen,useOT,keepDetail){return plans.map(function(pl){return evalOne(pl,S0,scen,useOT,keepDetail);});}
+function runSimulation(){
+  if(!window._sim){runSolve();return;}   // 최적화가 끝나면 runSolve가 3페이지에서 시뮬레이션을 이어서 실행
+  var body=document.getElementById('simBody');
+  body.innerHTML='<div class="ph">계산 중… (안전재고 수준별로 계획을 다시 최적화하는 중)</div>';
+  setTimeout(function(){
+    var S0=window._sim,cv=+document.getElementById('simCv').value/100,N=+document.getElementById('simN').value,useOT=document.getElementById('simOT').checked;
+    var plans=getSSPlans(S0),scen=makeScenarios(S0.D,cv,N,simSeed);
+    var res=evalLevels(plans,S0,scen,useOT,true);
+    // 민감도: 지연 비용(부재고비) × 수요 변동성에 따른 최적 안전재고
+    // 부재고비가 바뀌면 최적 계획도 바뀌므로, 부재고비마다 안전재고 수준별 계획을 다시 최적화한다
+    var cvs=[0.05,0.10,0.20,0.30],sCs=[S0.p.sC,10,20,40].filter(function(v,i,a){return a.indexOf(v)===i;}).sort(function(x,y){return x-y;});
+    var grid=sCs.map(function(sc){
+      var S1={p:Object.assign({},S0.p,{sC:sc}),D:S0.D,integer:S0.integer},pl=getSSPlans(S1);
+      return{sC:sc,cells:cvs.map(function(c){var r=evalLevels(pl,S1,makeScenarios(S0.D,c,Math.min(N,1000),simSeed),useOT,false).filter(Boolean);
+        var b=r.reduce(function(x,y){return x.exp<=y.exp?x:y;});return{cv:c,ss:b.ss,save:r[0].exp-b.exp};})};});
+    simResult={res:res,cv:cv,N:N,useOT:useOT,S0:S0,grid:grid,cvs:cvs,plans:plans,scen:scen,selCache:{}};
+    window._simDone=true;document.getElementById('simStale').style.display='none';
+    var ok=res.filter(Boolean);simView=ok.reduce(function(x,y){return x.exp<=y.exp?x:y;}).ss;
+    renderSimulation();
+  },30);
+}
+function ssLabel(ss){return Math.round(ss*100)+'%';}
+function renderSimulation(){
+  var R=simResult,res=R.res.filter(Boolean),p=R.S0.p;
+  var best=res.reduce(function(x,y){return x.exp<=y.exp?x:y;}),zero=res[0];
+  var bestFill=res.reduce(function(x,y){return x.fill>=y.fill?x:y;});
+  // 최적과 통계적으로 구분되지 않는 수준(짝지은 차이의 95% 신뢰구간이 0을 포함)
+  res.forEach(function(r){var d=r.costs.map(function(c,i){return c-best.costs[i];}),md=mean(d);
+    var sd=Math.sqrt(d.reduce(function(a,v){return a+(v-md)*(v-md);},0)/Math.max(1,d.length-1));r.tie=r.ss!==best.ss&&Math.abs(md)<=1.96*sd/Math.sqrt(d.length);});
+  var tied=res.filter(function(r){return r.tie||r.ss===best.ss;}).map(function(r){return r.ss;});
+  var rangeTxt=tied.length>1?' — 다만 '+ssLabel(Math.min.apply(null,tied))+'~'+ssLabel(Math.max.apply(null,tied))+'는 통계적으로 차이가 없어 이 범위를 최적 범위로 보는 게 정확합니다':'';
+  var ins=[];
+  ins.push('수요가 예측 대비 표준편차 <b>'+(R.cv*100).toFixed(0)+'%</b>로 흔들릴 때, 기대 총비용이 가장 낮은 안전재고는 <b>다음 달 수요의 '+ssLabel(best.ss)+'</b>입니다 (기대 총비용 '+fc(best.exp)+'천원)'+rangeTxt+'.');
+  if(best.ss>0){
+    var dPlan=best.plan-zero.plan,dExp=zero.exp-best.exp;
+    ins.push('안전재고 0% 계획과 비교하면 계획상 비용은 '+fc(dPlan)+'천원 늘지만, 수요 변동에 대응하는 비용(잔업·지연·기말 부족분 보충)이 더 크게 줄어 기대 총비용은 <b>'+fc(dExp)+'천원('+(dExp/zero.exp*100).toFixed(1)+'%) 절감</b>됩니다.');
+    ins.push('납기 내 충족률 '+zero.fill.toFixed(1)+'% → '+best.fill.toFixed(1)+'%, 지연이 한 번이라도 생기는 확률 '+zero.late.toFixed(0)+'% → '+best.late.toFixed(0)+'%, 최종재고 목표 미달 확률 '+zero.short.toFixed(0)+'% → '+best.short.toFixed(0)+'%.');
+  } else {
+    ins.push('이 변동성에서는 안전재고를 두지 않고 잔업·짧은 지연으로 대응하는 편이 기대 총비용이 가장 낮습니다. 안전재고를 늘리면 계획 비용 증가분이 변동 대응 비용 절감보다 큽니다.');
+  }
+  if(bestFill.ss!==best.ss)ins.push('충족률만 보면 '+ssLabel(bestFill.ss)+'가 가장 높지만('+bestFill.fill.toFixed(1)+'%), 기대 총비용은 최적점보다 '+fc(bestFill.exp-best.exp)+'천원 높습니다. 납기를 비용보다 우선한다면 그쪽을 고를 수 있습니다.');
+  var bestP90=res.reduce(function(x,y){return x.p90<=y.p90?x:y;});
+  if(bestP90.ss>best.ss)ins.push('나쁜 경우(상위 10%) 비용은 안전재고를 늘릴수록 줄어 '+ssLabel(bestP90.ss)+'에서 가장 낮습니다('+fc(best.p90)+' → '+fc(bestP90.p90)+'). 평균보다 최악의 경우를 줄이는 게 중요하면 안전재고를 더 두는 근거가 됩니다.');
+  if(best.ss===SS_LEVELS[SS_LEVELS.length-1])ins.push('<span class="ins-sub">최적값이 탐색 범위 상한('+ssLabel(best.ss)+')에 걸렸습니다. 실제 최적은 그보다 클 수 있습니다.</span>');
+  // 민감도 요약
+  var cur=R.grid.filter(function(g){return g.sC===p.sC;})[0],cvIdx=R.cvs.indexOf(R.cv),hi=R.grid[R.grid.length-1];
+  var allZero=cur.cells.every(function(c){return c.ss===0;});
+  var hiCell=hi.cells[cvIdx>=0?cvIdx:1];
+  ins.push('<b>핵심 변수는 지연 비용</b>: 현재 부재고비('+fn(p.sC)+'천원/개·월)에서는 '+(allZero?'변동성과 상관없이 안전재고를 두지 않는 게 기대비용이 가장 낮지만':'최적 안전재고가 '+cur.cells.map(function(c){return (c.cv*100).toFixed(0)+'%→'+ssLabel(c.ss);}).join(', ')+'이고')+
+    ', 지연 1개·1개월의 손실(고객 신뢰·위약금 등)을 '+fn(hi.sC)+'천원으로 보면 변동성 '+(hiCell.cv*100).toFixed(0)+'%에서 최적 안전재고는 <b>'+ssLabel(hiCell.ss)+'</b>입니다'+(hiCell.save>0.5?' (기대비용 '+fc(hiCell.save)+'천원 절감)':'')+'. 지연 비용을 얼마로 보느냐가 안전재고 결정을 좌우합니다. <span class="ins-sub">(아래 민감도 표)</span>');
+  if(R.cv===0)ins.push('변동성 0%에서 안전재고 0% 계획의 기대 총비용은 02 계획 최적화의 계획 비용과 같아야 합니다(모델 검증용).');
+  var rows=res.map(function(r){var isB=r.ss===best.ss;return '<tr'+(isB?' style="background:#eef8f1"':'')+'><td><b>'+ssLabel(r.ss)+'</b>'+(isB?' <span class="sim-best">← 최적</span>':r.tie?' <span class="sim-best">≈ 최적</span>':'')+'</td>'+
+    '<td>'+fc(r.plan)+'</td><td class="'+(isB?'sim-best':'')+'">'+fc(r.exp)+'</td><td>'+(r.ss===0?'—':((r.exp-zero.exp)>0?'+':'')+fc(r.exp-zero.exp))+'</td><td>'+fc(r.p90)+'</td>'+
+    '<td>'+r.fill.toFixed(1)+'%</td><td>'+r.late.toFixed(0)+'%</td><td>'+r.short.toFixed(0)+'%</td></tr>';}).join('');
+  var rows2=R.grid.map(function(g){var isCur=g.sC===p.sC;return '<tr'+(isCur?' style="background:#f3f5f8"':'')+'><td><b>'+fn(g.sC)+'</b>'+(isCur?' <span class="ins-sub">(현재 입력값)</span>':'')+'</td>'+
+    g.cells.map(function(c){var isSel=isCur&&Math.abs(c.cv-R.cv)<1e-9;return '<td'+(isSel?' class="sim-best"':'')+'><b>'+ssLabel(c.ss)+(c.ss===SS_LEVELS[SS_LEVELS.length-1]?' 이상':'')+'</b>'+(c.save>0.5?' <span class="ins-sub">(−'+fc(c.save)+')</span>':'')+'</td>';}).join('')+'</tr>';}).join('');
+  var body=document.getElementById('simBody');
+  body.innerHTML=
+    '<div class="rsec"><div class="rhd"><span class="rtitle">시뮬레이션 해석</span><span class="rbadge">'+R.N.toLocaleString()+'회 · 시드 '+simSeed+'</span></div>'+
+    '<div class="insight"><ul><li>'+ins.join('</li><li>')+'</li></ul></div></div>'+
+    '<div class="ccard ss-explore"><div class="chead"><span class="ctitle">안전재고 직접 바꿔보기</span></div>'+
+      '<div class="ss-slider-row"><span class="ss-lbl">안전재고 (다음 달 수요 대비)</span>'+
+      '<input type="range" id="ssSlider" min="0" max="50" step="1" value="'+Math.round(simView*100)+'" oninput="onSSSlide(this.value)">'+
+      '<span class="ss-val" id="ssVal">'+Math.round(simView*100)+'%</span></div>'+
+      '<div id="ssSel" class="ss-sel"></div>'+
+      '<div class="cbody"><div class="ctitle" style="font-size:12px;margin-bottom:6px">월말 순재고 범위 (재고 − 부재고, 개) — 선택한 안전재고 계획</div><div style="position:relative;height:230px"><canvas id="ch_simFan"></canvas></div></div></div>'+
+    '<div class="chart-grid-2">'+
+      '<div class="ccard"><div class="chead"><span class="ctitle">안전재고 수준별 비용 (천원)</span></div><div class="cbody"><div style="position:relative;height:230px"><canvas id="ch_ssCost"></canvas></div></div></div>'+
+      '<div class="ccard"><div class="chead"><span class="ctitle">안전재고 수준별 위험 (%)</span></div><div class="cbody"><div style="position:relative;height:230px"><canvas id="ch_ssRisk"></canvas></div></div></div>'+
+    '</div>'+
+    '<div class="rsec"><div class="rhd"><span class="rtitle">안전재고 수준별 결과</span><span class="rbadge">변동성 '+(R.cv*100).toFixed(0)+'% · 단위: 천원</span></div>'+
+    '<div class="twrap"><table><thead><tr><th>안전재고<br><span style="font-weight:400">(다음 달 수요 대비)</span></th><th>계획 비용</th><th>기대 총비용</th><th>0% 대비</th><th>나쁜 경우 (P90)</th><th>납기 내 충족률</th><th>지연 발생 확률</th><th>최종재고 미달 확률</th></tr></thead><tbody>'+rows+'</tbody></table></div></div>'+
+    '<div class="rsec"><div class="rhd"><span class="rtitle">민감도: 지연 비용 × 수요 변동성별 최적 안전재고</span><span class="rbadge">괄호 = 안전재고 0% 대비 기대비용 절감 (천원)</span></div>'+
+    '<div class="twrap"><table><thead><tr><th>부재고비 (천원/개·월)</th>'+R.cvs.map(function(c){return '<th>변동성 '+(c*100).toFixed(0)+'%</th>';}).join('')+'</tr></thead><tbody>'+rows2+'</tbody></table></div>'+
+    '<div class="sim-note" style="margin-top:6px">\'50% 이상\' = 탐색 범위 상한(50%)에서 최적, 실제 최적은 더 클 수 있음. 부재고비마다 안전재고 수준별 계획을 다시 최적화한 뒤 같은 방식으로 시뮬레이션. 부재고비는 지연 1개·1개월당 손실(재고 유지비처럼 장부에 잡히지 않는 고객 신뢰·위약금 등 포함)로 해석할 수 있습니다.</div></div>'+
+    '<div class="sim-note">가정: 안전재고 x% = 매달 말 순재고(재고−부재고)를 다음 달 예측 수요의 x% 이상으로 유지(마지막 달은 최종재고 목표 + 그 달 수요의 x%). 각 수준마다 02 계획 최적화 모델을 다시 풀어 계획을 만들고, 인원·생산·외주·잔업은 고정한 채 실제 수요만 바꿈. '+
+      '실제 수요 = 예측 × (1+ε), ε~N(0, 변동성²), 월별 독립, 모든 계획에 같은 시나리오 적용. '+(R.useOT?'계획보다 부족해지면 남은 잔업 한도 안에서 추가 생산, ':'')+'그래도 모자라면 부재고. '+
+      '기간 말 정산: 남은 부재고·최종재고 목표 부족분은 긴급 외주 단가('+fn(p.cC)+')로 채우고, 목표 초과 재고는 정규 생산 단가('+fn(Math.round(regUnitCost(p)*10)/10)+')만큼 차감. '+
+      '기대 총비용 = 실제 발생 비용 + 기말 정산의 평균.</div>';
+  window._ssBest=best;
+  drawSSCharts();
+  updateSelected(simView);
+}
+function drawSSCharts(sel){
+  var R=simResult,res=R.res.filter(Boolean),best=window._ssBest;
+  var xy=function(f){return res.map(function(r){return{x:Math.round(r.ss*100),y:f(r)};});};
+  var lin={type:'linear',min:0,max:50,ticks:{stepSize:5,callback:function(v){return v+'%';},font:{size:10}},title:{display:true,text:'안전재고 (다음 달 수요 대비)',font:{size:10}}};
+  var selDs=function(y,c){return sel?[{label:'선택',data:[{x:Math.round(sel.ss*100),y:y}],showLine:false,pointRadius:8,pointStyle:'crossRot',borderWidth:3,borderColor:c,backgroundColor:c,datalabels:{display:false}}]:[];};
+  mkChart('ch_ssCost',{type:'line',data:{datasets:[
+    {label:'기대 총비용',data:xy(function(r){return Math.round(r.exp);}),borderColor:'#111318',borderWidth:2.5,pointRadius:res.map(function(r){return r.ss===best.ss?7:4;}),pointBackgroundColor:res.map(function(r){return r.ss===best.ss?'#1a7f4b':'#fff';}),pointBorderColor:'#111318',fill:false,datalabels:{display:false}},
+    {label:'계획 비용',data:xy(function(r){return Math.round(r.plan);}),borderColor:'#8b93a1',borderDash:[6,4],borderWidth:1.5,pointRadius:3,fill:false,datalabels:{display:false}},
+    {label:'나쁜 경우 (P90)',data:xy(function(r){return Math.round(r.p90);}),borderColor:'#c0392b',borderDash:[2,3],borderWidth:1.5,pointRadius:0,fill:false,datalabels:{display:false}}
+  ].concat(selDs(sel?Math.round(sel.exp):0,'#1a56db'))},options:bOpts({animation:false,plugins:{legend:{display:true,labels:{boxWidth:10,font:{size:11}}},tooltip:baseTip},scales:{x:lin,y:{ticks:{font:{size:10}}}}})});
+  mkChart('ch_ssRisk',{type:'line',data:{datasets:[
+    {label:'지연 발생 확률',data:xy(function(r){return +r.late.toFixed(1);}),borderColor:'#c0392b',borderWidth:2,pointRadius:4,pointBackgroundColor:'#fff',fill:false,datalabels:{display:false}},
+    {label:'최종재고 미달 확률',data:xy(function(r){return +r.short.toFixed(1);}),borderColor:'#d97706',borderWidth:2,pointRadius:4,pointBackgroundColor:'#fff',fill:false,datalabels:{display:false}},
+    {label:'지연 수량 비율 (100−충족률)',data:xy(function(r){return +(100-r.fill).toFixed(2);}),borderColor:'#1a56db',borderWidth:2,borderDash:[5,4],pointRadius:3,fill:false,datalabels:{display:false}}
+  ].concat(selDs(sel?+sel.late.toFixed(1):0,'#c0392b'))},options:bOpts({animation:false,plugins:{legend:{display:true,labels:{boxWidth:10,font:{size:11}}},tooltip:baseTip},scales:{x:lin,y:{min:0,ticks:{font:{size:10}}}}})});
+}
+var ssSlideTimer=null;
+function onSSSlide(v){
+  document.getElementById('ssVal').textContent=v+'%';
+  clearTimeout(ssSlideTimer);ssSlideTimer=setTimeout(function(){updateSelected(+v/100);},60);
+}
+// 선택한 안전재고 수준: 계획을 다시 풀고, 같은 시나리오로 평가해 최적 수준과 짝지어 비교(95% 신뢰구간)
+function updateSelected(ss){
+  var R=simResult,best=window._ssBest;if(!R)return;
+  simView=ss;var k=ss.toFixed(2);
+  if(!R.selCache[k]){var pl=getPlanSS(R.S0,ss);R.selCache[k]=pl?evalOne(pl,R.S0,R.scen,R.useOT,true):null;}
+  var r=R.selCache[k],box=document.getElementById('ssSel');
+  if(!r){box.innerHTML='<div class="ins-sub">이 수준에서는 실행 가능한 계획이 없습니다.</div>';return;}
+  var d=r.costs.map(function(c,i){return c-best.costs[i];}),md=mean(d);
+  var sd=Math.sqrt(d.reduce(function(a,v){return a+(v-md)*(v-md);},0)/Math.max(1,d.length-1)),ci=1.96*sd/Math.sqrt(d.length);
+  var same=Math.abs(r.ss-best.ss)<1e-9,tie=!same&&Math.abs(md)<=ci;
+  var verdict=same?'<span class="sim-best">5% 단위 비교에서 기대비용이 가장 낮은 수준</span>':
+    tie?'<span class="sim-best">최적('+ssLabel(best.ss)+')과 통계적으로 구분되지 않음 — 최적 범위</span>':
+    (md>0?'최적('+ssLabel(best.ss)+')보다 기대비용이 <b>'+fc(md)+'</b> ± '+fc(ci)+' 높음':'최적('+ssLabel(best.ss)+')보다 기대비용이 <b>'+fc(-md)+'</b> ± '+fc(ci)+' 낮음 (5% 단위 사이 값)');
+  function kv(l,v){return '<div class="ss-kv"><div class="ss-k">'+l+'</div><div class="ss-v">'+v+'</div></div>';}
+  var pl0=getPlanSS(R.S0,ss).plan,Ws=pl0.map(function(x){return x.W;});
+  box.innerHTML='<div class="ss-grid">'+kv('계획 비용',fc(r.plan))+kv('기대 총비용',fc(r.exp))+kv('나쁜 경우 (P90)',fc(r.p90))+kv('납기 내 충족률',r.fill.toFixed(1)+'%')+kv('지연 발생 확률',r.late.toFixed(0)+'%')+kv('최종재고 미달',r.short.toFixed(0)+'%')+kv('인원',(Math.min.apply(null,Ws)===Math.max.apply(null,Ws)?fn(Ws[0]):fn(Math.min.apply(null,Ws))+'~'+fn(Math.max.apply(null,Ws)))+'명')+'</div>'+
+    '<div class="ss-verdict">'+verdict+' <span class="ins-sub">(같은 '+R.N.toLocaleString()+'개 시나리오로 짝지어 비교, 95% 신뢰구간)</span></div>';
+  // 팬 차트
+  var TH=R.S0.D.length,mLab=[],p10=[],p50=[],p90=[],planNet=[];
+  for(var t=0;t<TH;t++){var col=r.net.map(function(a){return a[t];});mLab.push((t+1)+'월');p10.push(Math.round(pct(col,.1)));p50.push(Math.round(pct(col,.5)));p90.push(Math.round(pct(col,.9)));planNet.push(Math.round(pl0[t].I-pl0[t].S));}
+  mkChart('ch_simFan',{type:'line',data:{labels:mLab,datasets:[
+    {label:'80% 구간',data:p90,borderColor:'transparent',backgroundColor:'rgba(26,86,219,.15)',pointRadius:0,fill:'+1',datalabels:{display:false}},
+    {label:'P10',data:p10,borderColor:'transparent',backgroundColor:'rgba(26,86,219,.15)',pointRadius:0,fill:false,datalabels:{display:false}},
+    {label:'중앙값',data:p50,borderColor:'#1a56db',borderWidth:2.5,pointRadius:4,pointBackgroundColor:'#fff',fill:false,datalabels:{display:false}},
+    {label:'계획',data:planNet,borderColor:'#8b93a1',borderDash:[5,4],borderWidth:1.5,pointRadius:0,fill:false,datalabels:{display:false}},
+    {label:'0선',data:mLab.map(function(){return 0;}),borderColor:'#c0392b',borderWidth:1,pointRadius:0,fill:false,datalabels:{display:false}}
+  ]},options:bOpts({animation:false,plugins:{legend:{display:true,labels:{boxWidth:10,font:{size:11},filter:function(it){return it.text!=='P10'&&it.text!=='0선';}}},tooltip:baseTip}})});
+  drawSSCharts(r);
+}
+
 
 /* ── SNAPSHOT ── */
 var snapshot = null;
